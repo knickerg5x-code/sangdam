@@ -12,6 +12,7 @@ export interface ConsultationRequest {
   studentName: string;
   studentClass: string;
   subject: string;
+  assignedInstructorName: string; // 추가: 담당 강사 이름
   requesterName: string;
   reason: string;
   status: ConsultationStatus;

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ConsultationRequest, ConsultationStatus, SUBJECTS } from '../types';
 import { generateConsultationSummary } from '../services/geminiService';
 
@@ -9,23 +9,36 @@ interface InstructorViewProps {
 }
 
 export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpdateStatus }) => {
+  const [instructorName, setInstructorName] = useState<string>(() => localStorage.getItem('last_instructor_name') || '');
+  const [isNameSet, setIsNameSet] = useState<boolean>(!!localStorage.getItem('last_instructor_name'));
   const [selectedSubject, setSelectedSubject] = useState<string>('전체');
   const [activeTab, setActiveTab] = useState<'PENDING' | 'COMPLETED'>('PENDING');
   const [loadingAi, setLoadingAi] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (instructorName) {
+      localStorage.setItem('last_instructor_name', instructorName);
+    }
+  }, [instructorName]);
+
   const filteredRequests = requests.filter(req => {
+    // 1. 이름 필터링 (입력한 이름이 포함되어 있는지 확인)
+    const matchesInstructor = instructorName && req.assignedInstructorName.includes(instructorName);
+    // 2. 과목 필터링
     const matchesSubject = selectedSubject === '전체' || req.subject === selectedSubject;
+    // 3. 상태 필터링
     const matchesStatus = activeTab === 'PENDING' 
       ? (req.status === ConsultationStatus.PENDING || req.status === ConsultationStatus.IN_PROGRESS)
       : req.status === ConsultationStatus.COMPLETED;
-    return matchesSubject && matchesStatus;
+    
+    return matchesInstructor && matchesSubject && matchesStatus;
   });
 
   const handleComplete = (req: ConsultationRequest) => {
     onUpdateStatus(req.id, { status: ConsultationStatus.COMPLETED });
     
     // 알림 문구 생성
-    const msg = `[상담완료] ${req.studentClass} ${req.studentName} 학생의 ${req.subject} 상담이 완료되었습니다. 확인 부탁드립니다.`;
+    const msg = `[상담완료] ${req.studentClass} ${req.studentName} 학생의 ${req.subject} 상담이 완료되었습니다. 확인 부탁드립니다. (담당: ${req.assignedInstructorName} 강사)`;
     navigator.clipboard.writeText(msg);
     alert('상담이 완료 처리되었습니다!\n담임 선생님께 보낼 알림 문구가 복사되었습니다.');
   };
@@ -47,25 +60,60 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
     }
   };
 
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
-        <div className="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto">
+  if (!isNameSet) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-500">
+        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl max-w-sm w-full text-center">
+          <div className="text-4xl mb-4">🔍</div>
+          <h3 className="text-xl font-black text-slate-800 mb-2">강사 성함 확인</h3>
+          <p className="text-slate-500 text-sm mb-6">상담을 진행할 강사님의 성함을 입력해주세요.</p>
+          <input
+            type="text"
+            placeholder="이강사"
+            className="w-full p-4 rounded-2xl bg-slate-50 border-0 focus:ring-2 focus:ring-emerald-500 text-center font-bold text-lg mb-4"
+            value={instructorName}
+            onChange={(e) => setInstructorName(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && instructorName && setIsNameSet(true)}
+          />
           <button
-            onClick={() => setActiveTab('PENDING')}
-            className={`flex-1 px-5 py-2 rounded-lg text-xs font-black transition-all ${activeTab === 'PENDING' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+            disabled={!instructorName}
+            onClick={() => setIsNameSet(true)}
+            className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black disabled:opacity-50 hover:bg-emerald-700 transition-all shadow-lg"
           >
-            대기/진행중
-          </button>
-          <button
-            onClick={() => setActiveTab('COMPLETED')}
-            className={`flex-1 px-5 py-2 rounded-lg text-xs font-black transition-all ${activeTab === 'COMPLETED' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            완료 내역
+            내 상담 목록 보기
           </button>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-slate-700">강사: </span>
+            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg font-black text-sm">{instructorName}</span>
+            <button onClick={() => setIsNameSet(false)} className="text-[10px] text-slate-400 hover:text-slate-600 font-bold underline ml-1">이름 변경</button>
+          </div>
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            <button
+              onClick={() => setActiveTab('PENDING')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'PENDING' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              대기
+            </button>
+            <button
+              onClick={() => setActiveTab('COMPLETED')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'COMPLETED' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              완료
+            </button>
+          </div>
+        </div>
+        
         <select
-          className="w-full md:w-auto p-2 bg-slate-50 border-0 rounded-lg text-xs font-bold text-slate-600 focus:ring-2 focus:ring-emerald-500"
+          className="w-full p-3 bg-slate-50 border-0 rounded-xl text-xs font-bold text-slate-600 focus:ring-2 focus:ring-emerald-500"
           value={selectedSubject}
           onChange={e => setSelectedSubject(e.target.value)}
         >
@@ -78,7 +126,7 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
         {filteredRequests.length === 0 ? (
           <div className="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-slate-100">
             <span className="text-4xl mb-4 block">☕</span>
-            <p className="text-slate-400 font-medium">처리할 상담이 없습니다.</p>
+            <p className="text-slate-400 font-medium">'{instructorName}' 강사님께 배정된 상담이 없습니다.</p>
           </div>
         ) : (
           filteredRequests.map(req => (

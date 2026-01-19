@@ -13,19 +13,20 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
     studentClass: '',
     studentName: '',
     subject: SUBJECTS[0],
+    assignedInstructorName: '', // 추가
     requesterName: '',
     reason: ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.studentName || !formData.studentClass || !formData.requesterName) return;
+    if (!formData.studentName || !formData.studentClass || !formData.requesterName || !formData.assignedInstructorName) return;
     onAddRequest(formData);
     
     // 메신저용 문구 생성 및 복사 안내
-    const msg = `[상담요청] ${formData.studentClass} ${formData.studentName} 학생에 대해 ${formData.subject} 상담을 요청드립니다. (신청: ${formData.requesterName} 선생님)`;
+    const msg = `[상담요청] ${formData.assignedInstructorName} 선생님, ${formData.studentClass} ${formData.studentName} 학생에 대해 ${formData.subject} 상담을 요청드립니다. (신청: ${formData.requesterName} 선생님)`;
     navigator.clipboard.writeText(msg);
-    alert('상담 신청이 완료되었습니다!\n강사님께 보낼 알림 문구가 클립보드에 복사되었습니다. 카톡이나 메신저에 붙여넣기 하세요.');
+    alert('상담 신청이 완료되었습니다!\n' + formData.assignedInstructorName + ' 선생님께 보낼 알림 문구가 클립보드에 복사되었습니다.');
     
     setFormData({ ...formData, studentName: '', reason: '' });
     setIsFormOpen(false);
@@ -68,7 +69,7 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
               <input required type="text" placeholder="홍길동" className="w-full p-3.5 rounded-2xl bg-slate-50 border-0 focus:ring-2 focus:ring-blue-500 font-medium" value={formData.studentName} onChange={e => setFormData({ ...formData, studentName: e.target.value })} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-500 ml-1">상담 과목</label>
               <select className="w-full p-3.5 rounded-2xl bg-slate-50 border-0 focus:ring-2 focus:ring-blue-500 font-bold text-slate-700" value={formData.subject} onChange={e => setFormData({ ...formData, subject: e.target.value })}>
@@ -76,7 +77,11 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 ml-1">신청 교사명</label>
+              <label className="text-xs font-bold text-slate-500 ml-1">담당 강사명</label>
+              <input required type="text" placeholder="이강사" className="w-full p-3.5 rounded-2xl bg-slate-50 border-0 focus:ring-2 focus:ring-blue-500 font-medium" value={formData.assignedInstructorName} onChange={e => setFormData({ ...formData, assignedInstructorName: e.target.value })} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-500 ml-1">신청 교사명(담임)</label>
               <input required type="text" placeholder="김담임" className="w-full p-3.5 rounded-2xl bg-slate-50 border-0 focus:ring-2 focus:ring-blue-500 font-medium" value={formData.requesterName} onChange={e => setFormData({ ...formData, requesterName: e.target.value })} />
             </div>
           </div>
@@ -107,7 +112,9 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
                       <span className="text-lg font-black text-slate-800">{req.studentClass} {req.studentName}</span>
                       <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold">{req.subject}</span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">{new Date(req.createdAt).toLocaleDateString()} • {req.requesterName} 선생님 신청</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      담당: {req.assignedInstructorName} 강사님 • 신청: {req.requesterName} 선생님
+                    </p>
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${getStatusColor(req.status)}`}>
