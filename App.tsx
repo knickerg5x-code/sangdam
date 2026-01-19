@@ -85,7 +85,7 @@ const App: React.FC = () => {
       req.subject,
       req.assignedInstructorName,
       req.requesterName,
-      `"${req.reason.replace(/"/g, '""')}"`,
+      `"${(req.reason || "").replace(/"/g, '""')}"`,
       req.status,
       new Date(req.createdAt).toLocaleString(),
       req.completedAt ? new Date(req.completedAt).toLocaleString() : "-",
@@ -107,10 +107,10 @@ const App: React.FC = () => {
     // 이메일 창 띄우기
     const emailTo = "knickerg5x@gmail.com";
     const subject = encodeURIComponent(`[상담시스템] 정기 상담 데이터 보고 (${new Date().toLocaleDateString()})`);
-    const body = encodeURIComponent(`다운로드된 엑셀 파일을 첨부하여 보내주세요.\n총 건수: ${requests.length}건\n미완료: ${requests.filter(r => r.status !== 'COMPLETED').length}건\n완료: ${requests.filter(r => r.status === 'COMPLETED').length}건`);
+    const body = encodeURIComponent(`다운로드된 엑셀 파일을 첨부하여 보내주세요.\n\n총 건수: ${requests.length}건\n완료: ${requests.filter(r => r.status === 'COMPLETED').length}건\n미완료: ${requests.filter(r => r.status !== 'COMPLETED').length}건`);
     window.location.href = `mailto:${emailTo}?subject=${subject}&body=${body}`;
     
-    addNotification("엑셀 파일이 다운로드되었습니다. 메일을 확인하세요.", "system");
+    addNotification("보고서 파일이 다운로드되었습니다.", "system");
   };
 
   if (!role) {
@@ -154,7 +154,7 @@ const App: React.FC = () => {
               className="w-full py-3 text-slate-400 hover:text-blue-600 text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              이 프로그램을 인터넷 주소로 만드는 방법
+              도움말 및 인터넷 주소 만들기
             </button>
           </div>
         </div>

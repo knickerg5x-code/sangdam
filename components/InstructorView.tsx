@@ -15,13 +15,19 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
 
   useEffect(() => {
     if (isNameSet && instructorName) {
-      localStorage.setItem('last_instructor_name', instructorName);
+      localStorage.setItem('last_instructor_name', instructorName.trim());
     }
   }, [instructorName, isNameSet]);
 
   const filteredRequests = requests.filter(req => {
-    // 1. 이름 필터링 (입력한 이름과 담당 강사명이 일치해야 함)
-    const matchesInstructor = instructorName && req.assignedInstructorName.trim() === instructorName.trim();
+    // 방어 코드: req나 assignedInstructorName이 없을 경우를 대비
+    if (!req || !instructorName) return false;
+    
+    const targetName = (req.assignedInstructorName || '').trim();
+    const myName = instructorName.trim();
+    
+    // 1. 이름 필터링 (정확히 일치)
+    const matchesInstructor = targetName === myName;
     // 2. 과목 필터링
     const matchesSubject = selectedSubject === '전체' || req.subject === selectedSubject;
     // 3. 상태 필터링
@@ -37,7 +43,10 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
       alert("상담 결과를 입력해주셔야 완료 처리가 가능합니다.");
       return;
     }
-    onUpdateStatus(req.id, { status: ConsultationStatus.COMPLETED });
+    onUpdateStatus(req.id, { 
+      status: ConsultationStatus.COMPLETED,
+      completedAt: Date.now() 
+    });
     
     // 알림 문구 생성
     const msg = `[상담완료] ${req.studentClass} ${req.studentName} 학생의 ${req.subject} 상담이 완료되었습니다. 확인 부탁드립니다. (담당: ${req.assignedInstructorName} 강사)`;
@@ -51,17 +60,17 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl max-w-sm w-full text-center">
           <div className="text-4xl mb-4">🔐</div>
           <h3 className="text-xl font-black text-slate-800 mb-2">강사 성함 확인</h3>
-          <p className="text-slate-500 text-sm mb-6">로그인하여 본인에게 온 상담 요청을 확인하세요.</p>
+          <p className="text-slate-500 text-sm mb-6">로그인하여 본인에게 배정된 상담 요청만 확인합니다.</p>
           <input
             type="text"
-            placeholder="선생님 성함을 입력하세요"
+            placeholder="이름을 입력하세요"
             className="w-full p-4 rounded-2xl bg-slate-50 border-0 focus:ring-2 focus:ring-emerald-500 text-center font-bold text-lg mb-4"
             value={instructorName}
             onChange={(e) => setInstructorName(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && instructorName && setIsNameSet(true)}
+            onKeyPress={(e) => e.key === 'Enter' && instructorName.trim() && setIsNameSet(true)}
           />
           <button
-            disabled={!instructorName}
+            disabled={!instructorName.trim()}
             onClick={() => setIsNameSet(true)}
             className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black disabled:opacity-50 hover:bg-emerald-700 transition-all shadow-lg"
           >
@@ -79,7 +88,15 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-slate-700">담당 강사: </span>
             <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg font-black text-sm">{instructorName}</span>
-            <button onClick={() => { setIsNameSet(false); localStorage.removeItem('last_instructor_name'); }} className="text-[10px] text-slate-400 hover:text-slate-600 font-bold underline ml-1">이름 변경</button>
+            <button 
+              onClick={() => { 
+                setIsNameSet(false); 
+                localStorage.removeItem('last_instructor_name'); 
+              }} 
+              className="text-[10px] text-slate-400 hover:text-slate-600 font-bold underline ml-1"
+            >
+              로그아웃/이름변경
+            </button>
           </div>
           <div className="flex bg-slate-100 p-1 rounded-xl">
             <button
@@ -150,7 +167,7 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
                 {req.status !== ConsultationStatus.COMPLETED ? (
                   <>
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-400 ml-1">상담 결과 기록</label>
+                      <label className="text-xs font-bold text-slate-400 ml-1">상담 결과 기록 (필수)</label>
                       <textarea
                         placeholder="상담 진행 내용 및 피드백을 기록하세요..."
                         className="w-full p-5 rounded-2xl bg-slate-50 border-0 focus:ring-2 focus:ring-emerald-500 transition-all h-32 text-sm font-medium"
