@@ -50,15 +50,14 @@
 
 import { ConsultationRequest } from '../types';
 
-// 주의: 실제 배포 후 생성된 Apps Script URL을 여기에 넣어야 합니다.
-const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz_SAMPLE_ID/exec"; 
+const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzDtHzTSvy6MhDJzrNQy6m3K1eNTJoIXJEvvnLMrdsT95HeBGAq-Ae5CzqjK6BWjEGu/exec"; 
 
 export const GoogleSheetService = {
   async syncAdd(request: ConsultationRequest) {
     try {
       const response = await fetch(SHEET_WEB_APP_URL, {
         method: 'POST',
-        mode: 'no-cors', // Apps Script 특성상 no-cors가 필요할 수 있음
+        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: "ADD",

@@ -51,7 +51,7 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
         <div className="font-bold text-slate-700 flex items-center gap-2">
           <span className="text-xs text-slate-400">교과강사:</span>
           <span className="text-emerald-600 font-black">{instructorName}</span>
-          <button onClick={() => { setIsNameSet(false); localStorage.removeItem('last_instructor_name'); }} className="text-[10px] text-slate-400 hover:text-slate-600 font-bold underline">변경</button>
+          <button onClick={() => { setIsNameSet(false); localStorage.removeItem('last_instructor_name'); }} className="text-[10px] text-slate-400 hover:text-slate-600 font-bold underline ml-1">변경</button>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-xl">
           <button onClick={() => setActiveTab('PENDING')} className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'PENDING' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400'}`}>상담 목록</button>
@@ -64,15 +64,15 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
           <div key={req.id} className="bg-white p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row gap-6 relative overflow-hidden">
             {/* 전달 완료 상태 표시 배지 */}
             {req.isDeliveryConfirmed && (
-              <div className="absolute top-0 right-0 px-4 py-1 bg-emerald-600 text-white text-[10px] font-black italic rounded-bl-xl shadow-sm z-10 flex items-center gap-1">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" /></svg>
-                담임교사 전달완료
+              <div className="absolute top-0 right-0 px-4 py-1.5 bg-emerald-600 text-white text-[10px] font-black italic rounded-bl-xl shadow-lg z-10 flex items-center gap-2">
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" /></svg>
+                학생에게 전달됨
               </div>
             )}
 
-            {/* 상담 가능 시간 그림 (5cm x 7cm 비율 시뮬레이션) */}
+            {/* 상담 가능 시간 그림 */}
             <div className="shrink-0 flex flex-col items-center gap-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase italic tracking-wider">상담가능시간</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase italic tracking-wider">담임제시 가능시간</span>
               <div className="time-grid-mini border-2 border-slate-100 bg-white overflow-hidden rounded-xl shadow-inner p-1">
                 <table className="w-full h-full border-collapse">
                   <thead>
@@ -105,33 +105,45 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
               </div>
               
               <div className="p-4 bg-slate-50 rounded-2xl text-xs text-slate-600 border border-slate-100 leading-relaxed italic">
-                <span className="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest not-italic">상담 내용</span>
+                <span className="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest not-italic">담임 요청 내용</span>
                 "{req.reason}"
               </div>
 
               {activeTab === 'PENDING' ? (
                 <div className="space-y-4 pt-2 border-t border-slate-100">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 ml-1 uppercase">확정 요일</label>
-                      <select 
-                        className="w-full p-3 bg-slate-100 border-0 rounded-xl text-sm font-black text-slate-700 focus:ring-2 focus:ring-emerald-500" 
-                        value={req.proposedDay || ''} 
-                        onChange={e => onUpdateStatus(req.id, { proposedDay: e.target.value })}
-                      >
-                        <option value="">요일 선택</option>
-                        {DAYS.map(d => <option key={d} value={d}>{d}요일</option>)}
-                      </select>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 ml-1 uppercase">확정 요일</label>
+                        <select 
+                          className="w-full p-3 bg-slate-100 border-0 rounded-xl text-sm font-black text-slate-700 focus:ring-2 focus:ring-emerald-500" 
+                          value={req.proposedDay || ''} 
+                          onChange={e => onUpdateStatus(req.id, { proposedDay: e.target.value })}
+                        >
+                          <option value="">요일 선택</option>
+                          {DAYS.map(d => <option key={d} value={d}>{d}요일</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 ml-1 uppercase">확정 시간</label>
+                        <input 
+                          placeholder="예: 3교시" 
+                          className="w-full p-3 bg-slate-100 border-0 rounded-xl text-sm font-black text-slate-700 placeholder:text-slate-300 focus:ring-2 focus:ring-emerald-500" 
+                          value={req.proposedTime || ''} 
+                          onChange={e => onUpdateStatus(req.id, { proposedTime: e.target.value })}
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 ml-1 uppercase">확정 시간</label>
-                      <input 
-                        placeholder="예: 3교시" 
-                        className="w-full p-3 bg-slate-100 border-0 rounded-xl text-sm font-black text-slate-700 placeholder:text-slate-300 focus:ring-2 focus:ring-emerald-500" 
-                        value={req.proposedTime || ''} 
-                        onChange={e => onUpdateStatus(req.id, { proposedTime: e.target.value })}
-                      />
-                    </div>
+                    <button 
+                      onClick={() => {
+                        if(!req.proposedDay || !req.proposedTime) return alert("요일과 시간을 선택해주세요.");
+                        onUpdateStatus(req.id, { proposedDay: req.proposedDay, proposedTime: req.proposedTime });
+                        alert("담임 선생님께 시간이 제안되었습니다.");
+                      }}
+                      className="w-full py-2 bg-blue-50 text-blue-700 rounded-xl text-xs font-black border border-blue-100 hover:bg-blue-100 transition-all"
+                    >
+                      상담 시간 담임에게 제안하기
+                    </button>
                   </div>
                   
                   <div className="space-y-1">
@@ -146,24 +158,27 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
 
                   <button 
                     onClick={() => {
-                      if(!req.proposedDay || !req.proposedTime) return alert("상담 요일과 시간을 먼저 확정해주세요.");
+                      if(!req.proposedDay || !req.proposedTime) return alert("상담 요일과 시간을 먼저 확정/제안해주세요.");
                       if(!req.instructorNotes) return alert("상담 결과를 입력해주세요.");
-                      onUpdateStatus(req.id, { status: ConsultationStatus.COMPLETED });
+                      if(confirm('상담을 완료 처리하시겠습니까?')) {
+                        onUpdateStatus(req.id, { status: ConsultationStatus.COMPLETED });
+                      }
                     }}
                     className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black shadow-lg hover:bg-emerald-700 transition-all active:scale-[0.98]"
                   >
-                    상담 완료 및 저장
+                    상담 최종 완료
                   </button>
                 </div>
               ) : (
                 <div className="p-4 bg-emerald-50 rounded-2xl text-sm font-medium border border-emerald-100 space-y-2">
                   <div className="flex justify-between text-[10px] font-black text-emerald-600 uppercase tracking-widest">
                     <span>상담 결과</span>
-                    <span>확정시간: {req.proposedDay}요일 {req.proposedTime}</span>
+                    <span>상담일시: {req.proposedDay}요일 {req.proposedTime}</span>
                   </div>
-                  <p className="text-slate-700 leading-relaxed">{req.instructorNotes}</p>
-                  <div className="pt-2 text-[9px] text-slate-400 font-bold text-right">
-                    완료일시: {req.completedAt && new Date(req.completedAt).toLocaleString()}
+                  <p className="text-slate-700 leading-relaxed font-medium italic">"{req.instructorNotes}"</p>
+                  <div className="pt-2 text-[9px] text-slate-400 font-bold text-right flex items-center justify-end gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" /></svg>
+                    완료일: {req.completedAt && new Date(req.completedAt).toLocaleDateString()}
                   </div>
                 </div>
               )}
