@@ -4,12 +4,10 @@ import { Layout } from './components/Layout';
 import { HomeroomView } from './components/HomeroomView';
 import { InstructorView } from './components/InstructorView';
 import { NotificationCenter } from './components/NotificationCenter';
-import { DeploymentGuide } from './components/DeploymentGuide';
 import { Role, ConsultationRequest } from './types';
 
 const App: React.FC = () => {
   const [role, setRole] = useState<Role | null>(null);
-  const [showGuide, setShowGuide] = useState(false);
   const [requests, setRequests] = useState<ConsultationRequest[]>(() => {
     const params = new URLSearchParams(window.location.search);
     const sharedData = params.get('data');
@@ -36,6 +34,7 @@ const App: React.FC = () => {
       id: Math.random().toString(36).substr(2, 9),
       status: 'PENDING' as any,
       createdAt: Date.now(),
+      availableTimeSlots: request.availableTimeSlots || [],
     };
     setRequests(prev => [newRequest, ...prev]);
     addNotification(`[새 요청] ${newRequest.studentName} 학생 상담이 등록되었습니다.`, 'system');
@@ -76,19 +75,17 @@ const App: React.FC = () => {
       return;
     }
 
-    // CSV 생성
-    const headers = ["ID", "반", "학생명", "과목", "담당강사", "신청교사", "신청사유", "상태", "신청일", "완료일", "상담결과"];
+    const headers = ["ID", "반", "학생명", "과목", "담당강사", "확정시간", "전달완료", "상태", "신청일", "상담결과"];
     const rows = requests.map(req => [
       req.id,
       req.studentClass,
       req.studentName,
       req.subject,
       req.assignedInstructorName,
-      req.requesterName,
-      `"${(req.reason || "").replace(/"/g, '""')}"`,
+      req.proposedDay ? `${req.proposedDay} ${req.proposedTime}` : "미정",
+      req.isDeliveryConfirmed ? "Y" : "N",
       req.status,
       new Date(req.createdAt).toLocaleString(),
-      req.completedAt ? new Date(req.completedAt).toLocaleString() : "-",
       `"${(req.instructorNotes || "").replace(/"/g, '""')}"`
     ]);
 
@@ -96,21 +93,17 @@ const App: React.FC = () => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     
-    // 파일 다운로드
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `상담데이터_${new Date().toLocaleDateString()}.csv`);
+    link.setAttribute("download", `과목별상담데이터_${new Date().toLocaleDateString()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    // 이메일 창 띄우기
     const emailTo = "knickerg5x@gmail.com";
-    const subject = encodeURIComponent(`[상담시스템] 정기 상담 데이터 보고 (${new Date().toLocaleDateString()})`);
-    const body = encodeURIComponent(`다운로드된 엑셀 파일을 첨부하여 보내주세요.\n\n총 건수: ${requests.length}건\n완료: ${requests.filter(r => r.status === 'COMPLETED').length}건\n미완료: ${requests.filter(r => r.status !== 'COMPLETED').length}건`);
+    const subject = encodeURIComponent(`[과목별 상담] 데이터 보고 (${new Date().toLocaleDateString()})`);
+    const body = encodeURIComponent(`다운로드된 파일을 첨부하세요.\n총 건수: ${requests.length}건`);
     window.location.href = `mailto:${emailTo}?subject=${subject}&body=${body}`;
-    
-    addNotification("보고서 파일이 다운로드되었습니다.", "system");
   };
 
   if (!role) {
@@ -121,7 +114,7 @@ const App: React.FC = () => {
             <div className="inline-block p-4 bg-blue-50 rounded-2xl mb-4">
               <span className="text-4xl">🎓</span>
             </div>
-            <h1 className="text-2xl font-black text-slate-800 mb-2">교사 상담 협력 허브</h1>
+            <h1 className="text-2xl font-black text-slate-800 mb-2">과목별 상담 신청</h1>
             <p className="text-slate-500 text-sm">담임교사와 교과강사의 원활한 소통을 지원합니다.</p>
           </div>
           
@@ -147,18 +140,7 @@ const App: React.FC = () => {
               <svg className="w-5 h-5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>
-
-          <div className="pt-6 border-t border-slate-100">
-            <button 
-              onClick={() => setShowGuide(true)}
-              className="w-full py-3 text-slate-400 hover:text-blue-600 text-sm font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              도움말 및 인터넷 주소 만들기
-            </button>
-          </div>
         </div>
-        {showGuide && <DeploymentGuide onClose={() => setShowGuide(false)} />}
       </div>
     );
   }
@@ -171,7 +153,7 @@ const App: React.FC = () => {
       onExport={exportToExcelAndEmail}
     >
       {role === 'HOMEROOM' ? (
-        <HomeroomView requests={requests} onAddRequest={addRequest} />
+        <HomeroomView requests={requests} onAddRequest={addRequest} onUpdateStatus={updateRequest} />
       ) : (
         <InstructorView requests={requests} onUpdateStatus={updateRequest} />
       )}

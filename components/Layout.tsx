@@ -17,43 +17,18 @@ export const Layout: React.FC<LayoutProps> = ({ children, role, onResetRole, onS
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-xl ${role === 'HOMEROOM' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
-              {role === 'HOMEROOM' ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-              )}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
             </div>
-            <div className="hidden sm:block">
-              <h2 className="font-bold text-slate-800 leading-tight text-sm md:text-base">
-                {role === 'HOMEROOM' ? '담임 교사' : '교과 강사'}
-              </h2>
-              <p className="text-[10px] text-slate-500 font-medium italic">Consultation Hub</p>
+            <div>
+              <h2 className="font-bold text-slate-800 text-sm md:text-base">과목별 상담 신청</h2>
+              <p className="text-[10px] text-slate-500 font-medium italic">{role === 'HOMEROOM' ? '담임 교사' : '교과 강사'} 모드</p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            <button
-              onClick={onExport}
-              className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border border-emerald-100"
-              title="데이터를 엑셀로 내려받고 메신저 보고"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              보고서 전송
-            </button>
-            <button
-              onClick={onShare}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
-              title="현재 상담 목록을 링크로 공유"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-              공유 링크
-            </button>
-            <button
-              onClick={onResetRole}
-              className="text-[10px] font-bold text-slate-400 hover:text-slate-600 p-1"
-            >
-              로그아웃
-            </button>
+            <button onClick={onExport} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold border border-emerald-100">보고서 전송</button>
+            <button onClick={onShare} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold transition-all">공유 링크</button>
+            <button onClick={onResetRole} className="text-[10px] font-bold text-slate-400 hover:text-slate-600 p-1">모드 변경</button>
           </div>
         </div>
       </header>
@@ -64,7 +39,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, role, onResetRole, onS
 
       <footer className="mt-auto py-6 border-t border-slate-200">
         <div className="max-w-4xl mx-auto px-4 text-center text-slate-400 text-[10px] uppercase tracking-widest font-bold">
-          Teacher Consultation Hub • data to knickerg5x@gmail.com
+          과목별 상담 신청 시스템 • knickerg5x@gmail.com
         </div>
       </footer>
     </div>
