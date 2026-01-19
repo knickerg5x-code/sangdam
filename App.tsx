@@ -66,7 +66,7 @@ const App: React.FC = () => {
     const dataStr = btoa(encodeURIComponent(JSON.stringify(requests)));
     const url = `${window.location.origin}${window.location.pathname}?data=${dataStr}`;
     navigator.clipboard.writeText(url);
-    addNotification("공유 링크가 복사되었습니다! 다른 선생님께 전달하세요.", "system");
+    addNotification("공유 링크가 복사되었습니다.", "system");
   };
 
   const exportToExcelAndEmail = () => {
@@ -75,17 +75,17 @@ const App: React.FC = () => {
       return;
     }
 
-    const headers = ["ID", "반", "학생명", "과목", "담당강사", "확정시간", "전달완료", "상태", "신청일", "상담결과"];
+    const headers = ["ID", "반", "학생명", "과목", "담당강사", "신청담임", "확정시간", "전달완료", "상태", "상담결과"];
     const rows = requests.map(req => [
       req.id,
       req.studentClass,
       req.studentName,
       req.subject,
       req.assignedInstructorName,
-      req.proposedDay ? `${req.proposedDay} ${req.proposedTime}` : "미정",
+      req.requesterName,
+      req.proposedDay ? `${req.proposedDay}요일 ${req.proposedTime}` : "미정",
       req.isDeliveryConfirmed ? "Y" : "N",
       req.status,
-      new Date(req.createdAt).toLocaleString(),
       `"${(req.instructorNotes || "").replace(/"/g, '""')}"`
     ]);
 
@@ -95,14 +95,14 @@ const App: React.FC = () => {
     
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `과목별상담데이터_${new Date().toLocaleDateString()}.csv`);
+    link.setAttribute("download", `상담데이터_${new Date().toLocaleDateString()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
     const emailTo = "knickerg5x@gmail.com";
     const subject = encodeURIComponent(`[과목별 상담] 데이터 보고 (${new Date().toLocaleDateString()})`);
-    const body = encodeURIComponent(`다운로드된 파일을 첨부하세요.\n총 건수: ${requests.length}건`);
+    const body = encodeURIComponent(`엑셀 파일을 첨부해주세요.\n총 건수: ${requests.length}건`);
     window.location.href = `mailto:${emailTo}?subject=${subject}&body=${body}`;
   };
 
@@ -115,10 +115,10 @@ const App: React.FC = () => {
               <span className="text-4xl">🎓</span>
             </div>
             <h1 className="text-2xl font-black text-slate-800 mb-2">과목별 상담 신청</h1>
-            <p className="text-slate-500 text-sm">담임교사와 교과강사의 원활한 소통을 지원합니다.</p>
+            <p className="text-slate-500 text-sm">교사 간의 원활한 상담 협력을 지원합니다.</p>
           </div>
           
-          <div className="space-y-4 mb-8">
+          <div className="space-y-4">
             <button
               onClick={() => setRole('HOMEROOM')}
               className="group w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-between"
