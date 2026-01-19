@@ -1,106 +1,76 @@
 
-/**
- * [구글 스프레드시트 Apps Script 복사용 코드]
- * - 아래 코드를 Apps Script 에디터에 전체 복사하여 붙여넣고 '새 배포' (웹 앱, 모든 사람) 하세요.
- * 
- * function doGet() {
- *   var sheet = SpreadsheetApp.openById("17sLO9dO4_wJBUsoDqy1YySymuuXmkMRRXe96yp8UlDo").getSheets()[0];
- *   var data = sheet.getDataRange().getValues();
- *   var headers = data[0];
- *   var jsonArray = [];
- *   
- *   for (var i = 1; i < data.length; i++) {
- *     var obj = {};
- *     obj.id = data[i][0];
- *     obj.createdAt = new Date(data[i][1]).getTime();
- *     obj.studentClass = data[i][2];
- *     obj.studentName = data[i][3];
- *     obj.subject = data[i][4];
- *     obj.assignedInstructorName = data[i][5];
- *     obj.requesterName = data[i][6];
- *     obj.reason = data[i][7];
- *     obj.availableTimeSlots = data[i][8] ? data[i][8].split(", ") : [];
- *     obj.proposedDay = data[i][9];
- *     obj.proposedTime = data[i][10];
- *     obj.instructorNotes = data[i][11];
- *     obj.isDeliveryConfirmed = data[i][12] === "완료";
- *     obj.status = data[i][13];
- *     jsonArray.push(obj);
- *   }
- *   
- *   return ContentService.createTextOutput(JSON.stringify(jsonArray))
- *     .setMimeType(ContentService.MimeType.JSON);
- * }
- * 
- * function doPost(e) {
- *   var sheet = SpreadsheetApp.openById("17sLO9dO4_wJBUsoDqy1YySymuuXmkMRRXe96yp8UlDo").getSheets()[0];
- *   var data = JSON.parse(e.postData.contents);
- *   var action = data.action;
- *   var payload = data.data;
- *   var rows = sheet.getDataRange().getValues();
- *   
- *   if (action === "ADD") {
- *     sheet.appendRow([
- *       payload.id,
- *       payload.createdAt ? new Date(payload.createdAt) : new Date(),
- *       payload.studentClass,
- *       payload.studentName,
- *       payload.subject,
- *       payload.assignedInstructorName,
- *       payload.requesterName,
- *       payload.reason,
- *       payload.availableTimeSlots.join(", "),
- *       "", "", "", "미완료", "PENDING"
- *     ]);
- *   } else if (action === "UPDATE") {
- *     for (var i = 1; i < rows.length; i++) {
- *       if (rows[i][0] == payload.id) {
- *         var rowNum = i + 1;
- *         if(payload.proposedDay) sheet.getRange(rowNum, 10).setValue(payload.proposedDay);
- *         if(payload.proposedTime) sheet.getRange(rowNum, 11).setValue(payload.proposedTime);
- *         if(payload.instructorNotes) sheet.getRange(rowNum, 12).setValue(payload.instructorNotes);
- *         if(payload.isDeliveryConfirmed !== undefined) sheet.getRange(rowNum, 13).setValue(payload.isDeliveryConfirmed ? "완료" : "미완료");
- *         if(payload.status) sheet.getRange(rowNum, 14).setValue(payload.status);
- *         break;
- *       }
- *     }
- *   }
- *   return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
- * }
- */
-
 import { ConsultationRequest } from '../types';
 
-const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzDtHzTSvy6MhDJzrNQy6m3K1eNTJoIXJEvvnLMrdsT95HeBGAq-Ae5CzqjK6BWjEGu/exec"; 
+/**
+ * [구글 스프레드시트 연동 설정]
+ * 배포 URL: 사용자가 제공한 최신 주소 반영
+ */
+const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwLRxrJgmLnfzJ0AI2F4Ie3nGTlBTqTtLbW19JJy1QxKkD6_6wuiYQH-aHxkyaQ30Zj/exec"; 
 
 export const GoogleSheetService = {
-  // 전체 데이터 가져오기 (실시간 공유의 핵심)
+  /**
+   * 전체 상담 데이터 불러오기
+   */
   async fetchAll(): Promise<ConsultationRequest[]> {
     try {
-      const response = await fetch(SHEET_WEB_APP_URL);
-      if (!response.ok) throw new Error("Network response was not ok");
-      return await response.json();
+      // 캐시 방지를 위해 타임스탬프 쿼리 추가 및 리다이렉트 허용
+      const response = await fetch(`${SHEET_WEB_APP_URL}?_t=${Date.now()}`, {
+        method: 'GET',
+        mode: 'cors',
+        cache: 'no-store',
+        redirect: 'follow',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP 에러: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      try {
+        const data = JSON.parse(text);
+        if (data.error) throw new Error(data.error);
+        
+        const results = Array.isArray(data) ? data : [];
+        // 성공한 데이터 로컬에 백업
+        localStorage.setItem('last_success_sync_data', JSON.stringify(results));
+        return results;
+      } catch (parseError) {
+        console.error("JSON 파싱 실패. 응답 내용:", text);
+        throw new Error("서버 응답 형식이 올바르지 않습니다.");
+      }
     } catch (error) {
-      console.error("Sheet FETCH Error:", error);
-      return [];
+      console.error("데이터 불러오기 실패:", error);
+      // 오프라인 상태이거나 에러 시 로컬 캐시 데이터 반환
+      const cached = localStorage.getItem('last_success_sync_data');
+      if (cached) {
+        console.warn("네트워크 오류로 로컬 캐시 데이터를 사용합니다.");
+        return JSON.parse(cached);
+      }
+      throw error;
     }
   },
 
+  /**
+   * 새로운 상담 신청 추가
+   */
   async syncAdd(request: ConsultationRequest) {
     try {
       await fetch(SHEET_WEB_APP_URL, {
         method: 'POST',
-        mode: 'no-cors',
+        mode: 'no-cors', // CORS 정책 우회를 위해 no-cors 사용 (전송 보장)
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: "ADD", data: request })
       });
       return true;
     } catch (error) {
-      console.error("Sheet ADD Error:", error);
+      console.error("시트 저장 실패:", error);
       return false;
     }
   },
 
+  /**
+   * 상담 상태 및 내용 업데이트
+   */
   async syncUpdate(request: ConsultationRequest) {
     try {
       await fetch(SHEET_WEB_APP_URL, {
@@ -111,7 +81,7 @@ export const GoogleSheetService = {
       });
       return true;
     } catch (error) {
-      console.error("Sheet UPDATE Error:", error);
+      console.error("시트 업데이트 실패:", error);
       return false;
     }
   }

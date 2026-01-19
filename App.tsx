@@ -12,6 +12,7 @@ const App: React.FC = () => {
   const [requests, setRequests] = useState<ConsultationRequest[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [notifications, setNotifications] = useState<{ id: string; message: string; type: 'sms' | 'system' }[]>([]);
 
@@ -20,32 +21,25 @@ const App: React.FC = () => {
     if (showLoading) setIsSyncing(true);
     try {
       const data = await GoogleSheetService.fetchAll();
-      if (data && data.length > 0) {
-        // ID 기준으로 병합하거나 최신 서버 데이터로 교체
-        setRequests(data.sort((a, b) => b.createdAt - a.createdAt));
-        setLastSyncTime(new Date());
-      }
-    } catch (e) {
+      const sortedData = data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      setRequests(sortedData);
+      setLastSyncTime(new Date());
+      setSyncError(null);
+    } catch (e: any) {
       console.error("동기화 실패", e);
+      setSyncError("서버와 연결할 수 없습니다. 잠시 후 다시 시도하거나 인터넷 연결을 확인하세요.");
     } finally {
       if (showLoading) setIsSyncing(false);
       setIsInitialLoading(false);
     }
   }, []);
 
-  // 초기 로딩 및 주기적 폴링 (30초마다)
+  // 초기 로딩 및 주기적 폴링 (기기 간 실시간 공유를 위해 15초마다 갱신)
   useEffect(() => {
     syncFromServer(true);
-    const interval = setInterval(() => syncFromServer(false), 30000);
+    const interval = setInterval(() => syncFromServer(false), 15000);
     return () => clearInterval(interval);
   }, [syncFromServer]);
-
-  // 로컬 스토리지 백업 (오프라인 대비)
-  useEffect(() => {
-    if (requests.length > 0) {
-      localStorage.setItem('consultation_requests', JSON.stringify(requests));
-    }
-  }, [requests]);
 
   const addRequest = async (request: Omit<ConsultationRequest, 'id' | 'status' | 'createdAt'>) => {
     const newRequest: ConsultationRequest = {
@@ -56,17 +50,20 @@ const App: React.FC = () => {
       availableTimeSlots: request.availableTimeSlots || [],
     };
     
-    // UI 우선 반영 (Optimistic UI)
+    // UI 우선 반영 (Optimistic Update)
     setRequests(prev => [newRequest, ...prev]);
-    addNotification(`[새 요청] ${newRequest.studentName} 학생 상담이 등록되었습니다.`, 'system');
-    
     setIsSyncing(true);
-    const success = await GoogleSheetService.syncAdd(newRequest);
-    if (success) setLastSyncTime(new Date());
-    setIsSyncing(false);
     
-    // 서버와 재동기화해서 확정된 데이터 가져오기
-    setTimeout(() => syncFromServer(false), 2000);
+    const success = await GoogleSheetService.syncAdd(newRequest);
+    if (success) {
+      setLastSyncTime(new Date());
+      addNotification(`상담 신청이 서버에 전송되었습니다.`, 'system');
+      // 전송 후 데이터 정합성을 위해 2초 후 재동기화
+      setTimeout(() => syncFromServer(false), 2000);
+    } else {
+      setSyncError("데이터 전송 중 오류가 발생했습니다.");
+    }
+    setIsSyncing(false);
   };
 
   const updateRequest = async (id: string, updates: Partial<ConsultationRequest>) => {
@@ -77,7 +74,6 @@ const App: React.FC = () => {
         const updated = { ...req, ...updates };
         if (updates.status === 'COMPLETED' && req.status !== 'COMPLETED') {
           updated.completedAt = Date.now();
-          addNotification(`[완료] ${req.studentName} 학생 상담이 완료되었습니다.`, 'system');
         }
         targetReq = updated;
         return updated;
@@ -88,39 +84,36 @@ const App: React.FC = () => {
     if (targetReq) {
       setIsSyncing(true);
       const success = await GoogleSheetService.syncUpdate(targetReq);
-      if (success) setLastSyncTime(new Date());
+      if (success) {
+        setLastSyncTime(new Date());
+        setTimeout(() => syncFromServer(false), 2000);
+      } else {
+        setSyncError("상태 업데이트 전송 실패");
+      }
       setIsSyncing(false);
-      
-      // 서버 데이터가 시트에 반영될 시간 확보 후 재동기화
-      setTimeout(() => syncFromServer(false), 2000);
     }
   };
 
   const addNotification = (message: string, type: 'sms' | 'system') => {
     const id = Math.random().toString(36).substr(2, 9);
     setNotifications(prev => [{ id, message, type }, ...prev]);
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    }, 5000);
+    setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4000);
   };
 
   const exportToExcelAndEmail = () => {
     if (requests.length === 0) {
-      alert("내보낼 데이터가 없습니다.");
+      alert("데이터가 없습니다.");
       return;
     }
-    const headers = ["ID", "일시", "반", "학생명", "과목", "담당강사", "신청담임", "확정시간", "전달완료", "상태", "상담결과"];
+    const headers = ["일시", "반", "학생명", "과목", "담당강사", "상담요일", "상담시간", "결과"];
     const rows = requests.map(req => [
-      req.id,
-      new Date(req.createdAt).toLocaleString(),
+      new Date(req.createdAt).toLocaleDateString(),
       req.studentClass,
       req.studentName,
       req.subject,
       req.assignedInstructorName,
-      req.requesterName,
-      req.proposedDay ? `${req.proposedDay}요일 ${req.proposedTime}` : "미정",
-      req.isDeliveryConfirmed ? "Y" : "N",
-      req.status,
+      req.proposedDay || "-",
+      req.proposedTime || "-",
       `"${(req.instructorNotes || "").replace(/"/g, '""')}"`
     ]);
 
@@ -129,55 +122,65 @@ const App: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `상담데이터_${new Date().toLocaleDateString()}.csv`;
+    link.download = `청솔_상담내역_${new Date().toLocaleDateString()}.csv`;
     link.click();
   };
 
   if (isInitialLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
-        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h2 className="text-xl font-black text-slate-800">데이터 동기화 중...</h2>
-        <p className="text-slate-400 mt-2 font-bold animate-pulse">잠시만 기다려주세요</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+        <div className="relative">
+          <div className="w-16 h-16 border-[4px] border-blue-50 rounded-full"></div>
+          <div className="w-16 h-16 border-[4px] border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+        </div>
+        <h2 className="text-lg font-black text-slate-800 mt-6 tracking-tight">클라우드 연결 중</h2>
+        <p className="text-slate-400 mt-2 text-sm font-bold animate-pulse">상담 시스템을 동기화하고 있습니다.</p>
       </div>
     );
   }
 
   if (!role) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
-        <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full border border-slate-200 animate-in zoom-in-95 duration-300">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl max-w-md w-full border border-slate-100 animate-in zoom-in-95 duration-500">
           <div className="text-center mb-10">
-            <div className="inline-block p-4 bg-blue-50 rounded-2xl mb-4">
-              <span className="text-4xl">🏛️</span>
+            <div className="inline-flex p-5 bg-blue-600 rounded-[1.5rem] mb-6 shadow-xl shadow-blue-200">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
             </div>
-            <h1 className="text-2xl font-black text-slate-800 mb-2">강북청솔 과목별 상담 신청</h1>
-            <p className="text-blue-600 font-black text-lg">사용자 성함을 입력하여 접속하세요</p>
+            <h1 className="text-3xl font-black text-slate-800 mb-2 tracking-tight">강북청솔 상담센터</h1>
+            <p className="text-slate-400 font-bold">통합 과목 상담 관리 시스템</p>
           </div>
           
-          <div className="grid grid-cols-1 gap-4">
+          <div className="space-y-4">
             <button
               onClick={() => setRole('HOMEROOM')}
-              className="group w-full py-5 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-between active:scale-95"
+              className="group w-full py-6 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.8rem] font-black transition-all shadow-xl shadow-blue-100 flex items-center justify-between active:scale-95"
             >
-              <div className="flex items-center gap-4">
-                <span className="text-3xl group-hover:scale-110 transition-transform">🏫</span>
-                <span className="text-xl">담임 모드</span>
+              <div className="flex items-center gap-5">
+                <span className="text-3xl">🏫</span>
+                <div className="text-left">
+                  <span className="block text-xl">담임 모드</span>
+                  <span className="text-xs text-blue-200 font-medium">상담 신청 및 학생 전달</span>
+                </div>
               </div>
-              <svg className="w-6 h-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+              <svg className="w-6 h-6 opacity-40 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
             </button>
+
             <button
               onClick={() => setRole('INSTRUCTOR')}
-              className="group w-full py-5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-between active:scale-95"
+              className="group w-full py-6 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[1.8rem] font-black transition-all shadow-xl shadow-emerald-100 flex items-center justify-between active:scale-95"
             >
-              <div className="flex items-center gap-4">
-                <span className="text-3xl group-hover:scale-110 transition-transform">📝</span>
-                <span className="text-xl">강사 모드</span>
+              <div className="flex items-center gap-5">
+                <span className="text-3xl">📝</span>
+                <div className="text-left">
+                  <span className="block text-xl">강사 모드</span>
+                  <span className="text-xs text-emerald-200 font-medium">시간 제안 및 결과 기록</span>
+                </div>
               </div>
-              <svg className="w-6 h-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+              <svg className="w-6 h-6 opacity-40 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
             </button>
           </div>
-          <p className="mt-8 text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">청솔 과목상담 전용 시스템 v2.0</p>
+          <p className="mt-10 text-center text-[11px] text-slate-300 font-black uppercase tracking-[0.2em]">All data synced via Google Cloud</p>
         </div>
       </div>
     );
@@ -187,9 +190,10 @@ const App: React.FC = () => {
     <Layout 
       role={role} 
       onResetRole={() => setRole(null)} 
-      onShare={() => { syncFromServer(true); alert("데이터를 최신화했습니다."); }}
+      onShare={() => { syncFromServer(true); }}
       onExport={exportToExcelAndEmail}
       isSyncing={isSyncing}
+      syncError={syncError}
       lastSyncTime={lastSyncTime}
     >
       {role === 'HOMEROOM' ? (
