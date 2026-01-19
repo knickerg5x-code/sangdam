@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { ConsultationRequest, ConsultationStatus, SUBJECTS } from '../types';
-import { generateConsultationSummary } from '../services/geminiService';
 
 interface InstructorViewProps {
   requests: ConsultationRequest[];
@@ -13,17 +12,16 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
   const [isNameSet, setIsNameSet] = useState<boolean>(!!localStorage.getItem('last_instructor_name'));
   const [selectedSubject, setSelectedSubject] = useState<string>('전체');
   const [activeTab, setActiveTab] = useState<'PENDING' | 'COMPLETED'>('PENDING');
-  const [loadingAi, setLoadingAi] = useState<string | null>(null);
 
   useEffect(() => {
-    if (instructorName) {
+    if (isNameSet && instructorName) {
       localStorage.setItem('last_instructor_name', instructorName);
     }
-  }, [instructorName]);
+  }, [instructorName, isNameSet]);
 
   const filteredRequests = requests.filter(req => {
-    // 1. 이름 필터링 (입력한 이름이 포함되어 있는지 확인)
-    const matchesInstructor = instructorName && req.assignedInstructorName.includes(instructorName);
+    // 1. 이름 필터링 (입력한 이름과 담당 강사명이 일치해야 함)
+    const matchesInstructor = instructorName && req.assignedInstructorName.trim() === instructorName.trim();
     // 2. 과목 필터링
     const matchesSubject = selectedSubject === '전체' || req.subject === selectedSubject;
     // 3. 상태 필터링
@@ -35,6 +33,10 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
   });
 
   const handleComplete = (req: ConsultationRequest) => {
+    if (!req.instructorNotes || req.instructorNotes.trim() === "") {
+      alert("상담 결과를 입력해주셔야 완료 처리가 가능합니다.");
+      return;
+    }
     onUpdateStatus(req.id, { status: ConsultationStatus.COMPLETED });
     
     // 알림 문구 생성
@@ -43,33 +45,16 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
     alert('상담이 완료 처리되었습니다!\n담임 선생님께 보낼 알림 문구가 복사되었습니다.');
   };
 
-  const handleAiAssist = async (req: ConsultationRequest) => {
-    if (!req.instructorNotes) {
-      alert('AI 요약을 생성하려면 먼저 상담 내용을 입력해주세요.');
-      return;
-    }
-    setLoadingAi(req.id);
-    try {
-      const summary = await generateConsultationSummary(req);
-      onUpdateStatus(req.id, { instructorNotes: `${req.instructorNotes}\n\n[AI 요약]: ${summary}` });
-    } catch (error) {
-      console.error(error);
-      alert('AI 요약 생성에 실패했습니다.');
-    } finally {
-      setLoadingAi(null);
-    }
-  };
-
   if (!isNameSet) {
     return (
       <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-500">
         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl max-w-sm w-full text-center">
-          <div className="text-4xl mb-4">🔍</div>
+          <div className="text-4xl mb-4">🔐</div>
           <h3 className="text-xl font-black text-slate-800 mb-2">강사 성함 확인</h3>
-          <p className="text-slate-500 text-sm mb-6">상담을 진행할 강사님의 성함을 입력해주세요.</p>
+          <p className="text-slate-500 text-sm mb-6">로그인하여 본인에게 온 상담 요청을 확인하세요.</p>
           <input
             type="text"
-            placeholder="이강사"
+            placeholder="선생님 성함을 입력하세요"
             className="w-full p-4 rounded-2xl bg-slate-50 border-0 focus:ring-2 focus:ring-emerald-500 text-center font-bold text-lg mb-4"
             value={instructorName}
             onChange={(e) => setInstructorName(e.target.value)}
@@ -80,7 +65,7 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
             onClick={() => setIsNameSet(true)}
             className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black disabled:opacity-50 hover:bg-emerald-700 transition-all shadow-lg"
           >
-            내 상담 목록 보기
+            내 상담 목록 확인
           </button>
         </div>
       </div>
@@ -92,22 +77,22 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
       <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-700">강사: </span>
+            <span className="text-sm font-bold text-slate-700">담당 강사: </span>
             <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg font-black text-sm">{instructorName}</span>
-            <button onClick={() => setIsNameSet(false)} className="text-[10px] text-slate-400 hover:text-slate-600 font-bold underline ml-1">이름 변경</button>
+            <button onClick={() => { setIsNameSet(false); localStorage.removeItem('last_instructor_name'); }} className="text-[10px] text-slate-400 hover:text-slate-600 font-bold underline ml-1">이름 변경</button>
           </div>
           <div className="flex bg-slate-100 p-1 rounded-xl">
             <button
               onClick={() => setActiveTab('PENDING')}
               className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'PENDING' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
             >
-              대기
+              대기 중
             </button>
             <button
               onClick={() => setActiveTab('COMPLETED')}
               className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'COMPLETED' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
             >
-              완료
+              완료됨
             </button>
           </div>
         </div>
@@ -117,7 +102,7 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
           value={selectedSubject}
           onChange={e => setSelectedSubject(e.target.value)}
         >
-          <option value="전체">모든 과목</option>
+          <option value="전체">모든 과목 필터</option>
           {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
@@ -155,7 +140,7 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
                 </div>
                 {req.reason && (
                   <div className="mt-5 p-4 bg-white rounded-2xl border border-slate-100 text-sm text-slate-600 leading-relaxed">
-                    <span className="font-black text-slate-400 text-[10px] block mb-1 uppercase italic tracking-wider">Homeroom Request</span>
+                    <span className="font-black text-slate-400 text-[10px] block mb-1 uppercase italic tracking-wider">Homeroom Teacher's Request</span>
                     {req.reason}
                   </div>
                 )}
@@ -164,31 +149,21 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
               <div className="p-6 space-y-4">
                 {req.status !== ConsultationStatus.COMPLETED ? (
                   <>
-                    <textarea
-                      placeholder="상담 결과 및 피드백을 기록하세요..."
-                      className="w-full p-5 rounded-2xl bg-slate-50 border-0 focus:ring-2 focus:ring-emerald-500 transition-all h-32 text-sm font-medium"
-                      value={req.instructorNotes || ''}
-                      onChange={e => onUpdateStatus(req.id, { instructorNotes: e.target.value })}
-                    />
-                    <div className="flex gap-3">
-                      <button
-                        disabled={loadingAi === req.id}
-                        onClick={() => handleAiAssist(req)}
-                        className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        {loadingAi === req.id ? (
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        ) : (
-                          <span className="text-sm">✨ AI 요약</span>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleComplete(req)}
-                        className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-black text-lg hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100"
-                      >
-                        상담 완료 및 알림 복사
-                      </button>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-400 ml-1">상담 결과 기록</label>
+                      <textarea
+                        placeholder="상담 진행 내용 및 피드백을 기록하세요..."
+                        className="w-full p-5 rounded-2xl bg-slate-50 border-0 focus:ring-2 focus:ring-emerald-500 transition-all h-32 text-sm font-medium"
+                        value={req.instructorNotes || ''}
+                        onChange={e => onUpdateStatus(req.id, { instructorNotes: e.target.value })}
+                      />
                     </div>
+                    <button
+                      onClick={() => handleComplete(req)}
+                      className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-lg hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100"
+                    >
+                      상담 완료 및 알림 복사
+                    </button>
                   </>
                 ) : (
                   <div className="p-5 bg-emerald-50 rounded-2xl border border-emerald-100">

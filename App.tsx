@@ -11,7 +11,6 @@ const App: React.FC = () => {
   const [role, setRole] = useState<Role | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [requests, setRequests] = useState<ConsultationRequest[]>(() => {
-    // 1. URL에 데이터가 있는지 확인 (공유된 링크인 경우)
     const params = new URLSearchParams(window.location.search);
     const sharedData = params.get('data');
     if (sharedData) {
@@ -22,7 +21,6 @@ const App: React.FC = () => {
         console.error("공유 데이터 복구 실패", e);
       }
     }
-    // 2. 없으면 로컬 스토리지 확인
     const saved = localStorage.getItem('consultation_requests');
     return saved ? JSON.parse(saved) : [];
   });
@@ -70,6 +68,49 @@ const App: React.FC = () => {
     const url = `${window.location.origin}${window.location.pathname}?data=${dataStr}`;
     navigator.clipboard.writeText(url);
     addNotification("공유 링크가 복사되었습니다! 다른 선생님께 전달하세요.", "system");
+  };
+
+  const exportToExcelAndEmail = () => {
+    if (requests.length === 0) {
+      alert("내보낼 데이터가 없습니다.");
+      return;
+    }
+
+    // CSV 생성
+    const headers = ["ID", "반", "학생명", "과목", "담당강사", "신청교사", "신청사유", "상태", "신청일", "완료일", "상담결과"];
+    const rows = requests.map(req => [
+      req.id,
+      req.studentClass,
+      req.studentName,
+      req.subject,
+      req.assignedInstructorName,
+      req.requesterName,
+      `"${req.reason.replace(/"/g, '""')}"`,
+      req.status,
+      new Date(req.createdAt).toLocaleString(),
+      req.completedAt ? new Date(req.completedAt).toLocaleString() : "-",
+      `"${(req.instructorNotes || "").replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    
+    // 파일 다운로드
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `상담데이터_${new Date().toLocaleDateString()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // 이메일 창 띄우기
+    const emailTo = "knickerg5x@gmail.com";
+    const subject = encodeURIComponent(`[상담시스템] 정기 상담 데이터 보고 (${new Date().toLocaleDateString()})`);
+    const body = encodeURIComponent(`다운로드된 엑셀 파일을 첨부하여 보내주세요.\n총 건수: ${requests.length}건\n미완료: ${requests.filter(r => r.status !== 'COMPLETED').length}건\n완료: ${requests.filter(r => r.status === 'COMPLETED').length}건`);
+    window.location.href = `mailto:${emailTo}?subject=${subject}&body=${body}`;
+    
+    addNotification("엑셀 파일이 다운로드되었습니다. 메일을 확인하세요.", "system");
   };
 
   if (!role) {
@@ -127,6 +168,7 @@ const App: React.FC = () => {
       role={role} 
       onResetRole={() => setRole(null)} 
       onShare={generateShareLink}
+      onExport={exportToExcelAndEmail}
     >
       {role === 'HOMEROOM' ? (
         <HomeroomView requests={requests} onAddRequest={addRequest} />

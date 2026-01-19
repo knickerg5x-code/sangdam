@@ -12,14 +12,13 @@ export interface ConsultationRequest {
   studentName: string;
   studentClass: string;
   subject: string;
-  assignedInstructorName: string; // 추가: 담당 강사 이름
+  assignedInstructorName: string;
   requesterName: string;
   reason: string;
   status: ConsultationStatus;
   createdAt: number;
   completedAt?: number;
   instructorNotes?: string;
-  aiSummary?: string;
 }
 
 export const SUBJECTS = [
