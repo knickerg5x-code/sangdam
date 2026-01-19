@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Layout } from './components/Layout';
 import { HomeroomView } from './components/HomeroomView';
 import { InstructorView } from './components/InstructorView';
@@ -9,25 +9,42 @@ import { GoogleSheetService } from './services/googleSheetService';
 
 const App: React.FC = () => {
   const [role, setRole] = useState<Role | null>(null);
+  const [requests, setRequests] = useState<ConsultationRequest[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [requests, setRequests] = useState<ConsultationRequest[]>(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sharedData = params.get('data');
-    if (sharedData) {
-      try {
-        const decoded = JSON.parse(atob(decodeURIComponent(sharedData)));
-        return decoded;
-      } catch (e) {
-        console.error("공유 데이터 복구 실패", e);
-      }
-    }
-    const saved = localStorage.getItem('consultation_requests');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [notifications, setNotifications] = useState<{ id: string; message: string; type: 'sms' | 'system' }[]>([]);
 
+  // 서버에서 데이터 동기화
+  const syncFromServer = useCallback(async (showLoading = false) => {
+    if (showLoading) setIsSyncing(true);
+    try {
+      const data = await GoogleSheetService.fetchAll();
+      if (data && data.length > 0) {
+        // ID 기준으로 병합하거나 최신 서버 데이터로 교체
+        setRequests(data.sort((a, b) => b.createdAt - a.createdAt));
+        setLastSyncTime(new Date());
+      }
+    } catch (e) {
+      console.error("동기화 실패", e);
+    } finally {
+      if (showLoading) setIsSyncing(false);
+      setIsInitialLoading(false);
+    }
+  }, []);
+
+  // 초기 로딩 및 주기적 폴링 (30초마다)
   useEffect(() => {
-    localStorage.setItem('consultation_requests', JSON.stringify(requests));
+    syncFromServer(true);
+    const interval = setInterval(() => syncFromServer(false), 30000);
+    return () => clearInterval(interval);
+  }, [syncFromServer]);
+
+  // 로컬 스토리지 백업 (오프라인 대비)
+  useEffect(() => {
+    if (requests.length > 0) {
+      localStorage.setItem('consultation_requests', JSON.stringify(requests));
+    }
   }, [requests]);
 
   const addRequest = async (request: Omit<ConsultationRequest, 'id' | 'status' | 'createdAt'>) => {
@@ -39,12 +56,17 @@ const App: React.FC = () => {
       availableTimeSlots: request.availableTimeSlots || [],
     };
     
+    // UI 우선 반영 (Optimistic UI)
     setRequests(prev => [newRequest, ...prev]);
     addNotification(`[새 요청] ${newRequest.studentName} 학생 상담이 등록되었습니다.`, 'system');
     
     setIsSyncing(true);
-    await GoogleSheetService.syncAdd(newRequest);
+    const success = await GoogleSheetService.syncAdd(newRequest);
+    if (success) setLastSyncTime(new Date());
     setIsSyncing(false);
+    
+    // 서버와 재동기화해서 확정된 데이터 가져오기
+    setTimeout(() => syncFromServer(false), 2000);
   };
 
   const updateRequest = async (id: string, updates: Partial<ConsultationRequest>) => {
@@ -65,8 +87,12 @@ const App: React.FC = () => {
 
     if (targetReq) {
       setIsSyncing(true);
-      await GoogleSheetService.syncUpdate(targetReq);
+      const success = await GoogleSheetService.syncUpdate(targetReq);
+      if (success) setLastSyncTime(new Date());
       setIsSyncing(false);
+      
+      // 서버 데이터가 시트에 반영될 시간 확보 후 재동기화
+      setTimeout(() => syncFromServer(false), 2000);
     }
   };
 
@@ -78,22 +104,15 @@ const App: React.FC = () => {
     }, 5000);
   };
 
-  const generateShareLink = () => {
-    const dataStr = btoa(encodeURIComponent(JSON.stringify(requests)));
-    const url = `${window.location.origin}${window.location.pathname}?data=${dataStr}`;
-    navigator.clipboard.writeText(url);
-    addNotification("공유 링크가 복사되었습니다.", "system");
-  };
-
   const exportToExcelAndEmail = () => {
     if (requests.length === 0) {
       alert("내보낼 데이터가 없습니다.");
       return;
     }
-
-    const headers = ["ID", "반", "학생명", "과목", "담당강사", "신청담임", "확정시간", "전달완료", "상태", "상담결과"];
+    const headers = ["ID", "일시", "반", "학생명", "과목", "담당강사", "신청담임", "확정시간", "전달완료", "상태", "상담결과"];
     const rows = requests.map(req => [
       req.id,
+      new Date(req.createdAt).toLocaleString(),
       req.studentClass,
       req.studentName,
       req.subject,
@@ -108,19 +127,21 @@ const App: React.FC = () => {
     const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `상담데이터_${new Date().toLocaleDateString()}.csv`);
-    document.body.appendChild(link);
+    link.href = url;
+    link.download = `상담데이터_${new Date().toLocaleDateString()}.csv`;
     link.click();
-    document.body.removeChild(link);
-
-    const emailTo = "knickerg5x@gmail.com";
-    const subject = encodeURIComponent(`[과목별 상담] 데이터 보고 (${new Date().toLocaleDateString()})`);
-    const body = encodeURIComponent(`엑셀 파일을 첨부해주세요.\n총 건수: ${requests.length}건`);
-    window.location.href = `mailto:${emailTo}?subject=${subject}&body=${body}`;
   };
+
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h2 className="text-xl font-black text-slate-800">데이터 동기화 중...</h2>
+        <p className="text-slate-400 mt-2 font-bold animate-pulse">잠시만 기다려주세요</p>
+      </div>
+    );
+  }
 
   if (!role) {
     return (
@@ -131,13 +152,13 @@ const App: React.FC = () => {
               <span className="text-4xl">🏛️</span>
             </div>
             <h1 className="text-2xl font-black text-slate-800 mb-2">강북청솔 과목별 상담 신청</h1>
-            <p className="text-blue-600 font-black text-lg">이름으로 로그인 하세요</p>
+            <p className="text-blue-600 font-black text-lg">사용자 성함을 입력하여 접속하세요</p>
           </div>
           
           <div className="grid grid-cols-1 gap-4">
             <button
               onClick={() => setRole('HOMEROOM')}
-              className="group w-full py-5 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-between"
+              className="group w-full py-5 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-between active:scale-95"
             >
               <div className="flex items-center gap-4">
                 <span className="text-3xl group-hover:scale-110 transition-transform">🏫</span>
@@ -147,7 +168,7 @@ const App: React.FC = () => {
             </button>
             <button
               onClick={() => setRole('INSTRUCTOR')}
-              className="group w-full py-5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-between"
+              className="group w-full py-5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-between active:scale-95"
             >
               <div className="flex items-center gap-4">
                 <span className="text-3xl group-hover:scale-110 transition-transform">📝</span>
@@ -156,6 +177,7 @@ const App: React.FC = () => {
               <svg className="w-6 h-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>
+          <p className="mt-8 text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">청솔 과목상담 전용 시스템 v2.0</p>
         </div>
       </div>
     );
@@ -165,9 +187,10 @@ const App: React.FC = () => {
     <Layout 
       role={role} 
       onResetRole={() => setRole(null)} 
-      onShare={generateShareLink}
+      onShare={() => { syncFromServer(true); alert("데이터를 최신화했습니다."); }}
       onExport={exportToExcelAndEmail}
       isSyncing={isSyncing}
+      lastSyncTime={lastSyncTime}
     >
       {role === 'HOMEROOM' ? (
         <HomeroomView requests={requests} onAddRequest={addRequest} onUpdateStatus={updateRequest} />
