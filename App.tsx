@@ -5,9 +5,11 @@ import { HomeroomView } from './components/HomeroomView';
 import { InstructorView } from './components/InstructorView';
 import { NotificationCenter } from './components/NotificationCenter';
 import { Role, ConsultationRequest } from './types';
+import { GoogleSheetService } from './services/googleSheetService';
 
 const App: React.FC = () => {
   const [role, setRole] = useState<Role | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [requests, setRequests] = useState<ConsultationRequest[]>(() => {
     const params = new URLSearchParams(window.location.search);
     const sharedData = params.get('data');
@@ -28,7 +30,7 @@ const App: React.FC = () => {
     localStorage.setItem('consultation_requests', JSON.stringify(requests));
   }, [requests]);
 
-  const addRequest = (request: Omit<ConsultationRequest, 'id' | 'status' | 'createdAt'>) => {
+  const addRequest = async (request: Omit<ConsultationRequest, 'id' | 'status' | 'createdAt'>) => {
     const newRequest: ConsultationRequest = {
       ...request,
       id: Math.random().toString(36).substr(2, 9),
@@ -36,11 +38,19 @@ const App: React.FC = () => {
       createdAt: Date.now(),
       availableTimeSlots: request.availableTimeSlots || [],
     };
+    
     setRequests(prev => [newRequest, ...prev]);
     addNotification(`[새 요청] ${newRequest.studentName} 학생 상담이 등록되었습니다.`, 'system');
+    
+    // Google 시트 동기화
+    setIsSyncing(true);
+    await GoogleSheetService.syncAdd(newRequest);
+    setIsSyncing(false);
   };
 
-  const updateRequest = (id: string, updates: Partial<ConsultationRequest>) => {
+  const updateRequest = async (id: string, updates: Partial<ConsultationRequest>) => {
+    let targetReq: ConsultationRequest | null = null;
+    
     setRequests(prev => prev.map(req => {
       if (req.id === id) {
         const updated = { ...req, ...updates };
@@ -48,10 +58,18 @@ const App: React.FC = () => {
           updated.completedAt = Date.now();
           addNotification(`[완료] ${req.studentName} 학생 상담이 완료되었습니다.`, 'system');
         }
+        targetReq = updated;
         return updated;
       }
       return req;
     }));
+
+    // Google 시트 업데이트 동기화
+    if (targetReq) {
+      setIsSyncing(true);
+      await GoogleSheetService.syncUpdate(targetReq);
+      setIsSyncing(false);
+    }
   };
 
   const addNotification = (message: string, type: 'sms' | 'system') => {
@@ -151,6 +169,7 @@ const App: React.FC = () => {
       onResetRole={() => setRole(null)} 
       onShare={generateShareLink}
       onExport={exportToExcelAndEmail}
+      isSyncing={isSyncing}
     >
       {role === 'HOMEROOM' ? (
         <HomeroomView requests={requests} onAddRequest={addRequest} onUpdateStatus={updateRequest} />
