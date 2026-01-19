@@ -1,15 +1,20 @@
 
 /**
  * [구글 스프레드시트 Apps Script 복사용 코드]
+ * - 이 코드를 Google Apps Script 프로젝트에 붙여넣고 '웹 앱'으로 배포(액세스 권한: 모든 사람)하세요.
  * 
  * function doPost(e) {
  *   var sheet = SpreadsheetApp.openById("17sLO9dO4_wJBUsoDqy1YySymuuXmkMRRXe96yp8UlDo").getSheets()[0];
- *   var data = JSON.parse(e.postData.contents);
+ *   var data;
+ *   try {
+ *     data = JSON.parse(e.postData.contents);
+ *   } catch(err) {
+ *     return ContentService.createTextOutput("Error: " + err.message).setMimeType(ContentService.MimeType.TEXT);
+ *   }
+ *   
  *   var action = data.action;
  *   var payload = data.data;
- *   
  *   var rows = sheet.getDataRange().getValues();
- *   var idColumnIndex = 0; // ID가 첫 번째 열(A)에 있다고 가정
  *   
  *   if (action === "ADD") {
  *     sheet.appendRow([
@@ -22,29 +27,26 @@
  *       payload.requesterName,
  *       payload.reason,
  *       payload.availableTimeSlots.join(", "),
- *       "", // 확정요일
- *       "", // 확정시간
- *       "", // 상담결과
- *       "미완료", // 전달여부
- *       "대기중"  // 상태
+ *       "", // 10열: 확정요일
+ *       "", // 11열: 확정시간
+ *       "", // 12열: 상담결과
+ *       "미완료", // 13열: 전달여부
+ *       "대기중"  // 14열: 상태
  *     ]);
- *     return ContentService.createTextOutput(JSON.stringify({result: "success"})).setMimeType(ContentService.MimeType.JSON);
- *   }
- *   
- *   if (action === "UPDATE") {
+ *   } else if (action === "UPDATE") {
  *     for (var i = 1; i < rows.length; i++) {
- *       if (rows[i][idColumnIndex] == payload.id) {
+ *       if (rows[i][0] == payload.id) {
  *         var rowNum = i + 1;
- *         sheet.getRange(rowNum, 10).setValue(payload.proposedDay || rows[i][9]);
- *         sheet.getRange(rowNum, 11).setValue(payload.proposedTime || rows[i][10]);
- *         sheet.getRange(rowNum, 12).setValue(payload.instructorNotes || rows[i][11]);
- *         sheet.getRange(rowNum, 13).setValue(payload.isDeliveryConfirmed ? "완료" : "미완료");
- *         sheet.getRange(rowNum, 14).setValue(payload.status);
+ *         if(payload.proposedDay) sheet.getRange(rowNum, 10).setValue(payload.proposedDay);
+ *         if(payload.proposedTime) sheet.getRange(rowNum, 11).setValue(payload.proposedTime);
+ *         if(payload.instructorNotes) sheet.getRange(rowNum, 12).setValue(payload.instructorNotes);
+ *         if(payload.isDeliveryConfirmed !== undefined) sheet.getRange(rowNum, 13).setValue(payload.isDeliveryConfirmed ? "완료" : "미완료");
+ *         if(payload.status) sheet.getRange(rowNum, 14).setValue(payload.status);
  *         break;
  *       }
  *     }
- *     return ContentService.createTextOutput(JSON.stringify({result: "success"})).setMimeType(ContentService.MimeType.JSON);
  *   }
+ *   return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
  * }
  */
 
@@ -55,31 +57,35 @@ const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzDtHzTSvy6Mh
 export const GoogleSheetService = {
   async syncAdd(request: ConsultationRequest) {
     try {
-      const response = await fetch(SHEET_WEB_APP_URL, {
+      await fetch(SHEET_WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
         body: JSON.stringify({
           action: "ADD",
           data: {
             ...request,
-            createdAt: new Date(request.createdAt).toLocaleString()
+            createdAt: new Date(request.createdAt).toLocaleString('ko-KR')
           }
         })
       });
       return true;
     } catch (error) {
-      console.error("Sheet Sync Error:", error);
+      console.error("Sheet ADD Error:", error);
       return false;
     }
   },
 
   async syncUpdate(request: ConsultationRequest) {
     try {
-      const response = await fetch(SHEET_WEB_APP_URL, {
+      await fetch(SHEET_WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
         body: JSON.stringify({
           action: "UPDATE",
           data: request
@@ -87,7 +93,7 @@ export const GoogleSheetService = {
       });
       return true;
     } catch (error) {
-      console.error("Sheet Update Error:", error);
+      console.error("Sheet UPDATE Error:", error);
       return false;
     }
   }

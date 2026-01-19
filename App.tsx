@@ -42,7 +42,6 @@ const App: React.FC = () => {
     setRequests(prev => [newRequest, ...prev]);
     addNotification(`[새 요청] ${newRequest.studentName} 학생 상담이 등록되었습니다.`, 'system');
     
-    // Google 시트 동기화
     setIsSyncing(true);
     await GoogleSheetService.syncAdd(newRequest);
     setIsSyncing(false);
@@ -64,7 +63,6 @@ const App: React.FC = () => {
       return req;
     }));
 
-    // Google 시트 업데이트 동기화
     if (targetReq) {
       setIsSyncing(true);
       await GoogleSheetService.syncUpdate(targetReq);
@@ -127,36 +125,35 @@ const App: React.FC = () => {
   if (!role) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
-        <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full border border-slate-200">
-          <div className="text-center mb-8">
+        <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full border border-slate-200 animate-in zoom-in-95 duration-300">
+          <div className="text-center mb-10">
             <div className="inline-block p-4 bg-blue-50 rounded-2xl mb-4">
-              <span className="text-4xl">🎓</span>
+              <span className="text-4xl">🏛️</span>
             </div>
-            <h1 className="text-2xl font-black text-slate-800 mb-1">과목별 상담 신청</h1>
-            <p className="text-blue-600 font-bold mb-4">이름으로 로그인 하세요</p>
-            <p className="text-slate-500 text-sm">교사 간의 원활한 상담 협력을 지원합니다.</p>
+            <h1 className="text-2xl font-black text-slate-800 mb-2">강북청솔 과목별 상담 신청</h1>
+            <p className="text-blue-600 font-black text-lg">이름으로 로그인 하세요</p>
           </div>
           
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
             <button
               onClick={() => setRole('HOMEROOM')}
-              className="group w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-between"
+              className="group w-full py-5 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-between"
             >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl group-hover:scale-110 transition-transform">🏫</span>
-                <span className="text-lg">담임 모드</span>
+              <div className="flex items-center gap-4">
+                <span className="text-3xl group-hover:scale-110 transition-transform">🏫</span>
+                <span className="text-xl">담임 모드</span>
               </div>
-              <svg className="w-5 h-5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+              <svg className="w-6 h-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
             </button>
             <button
               onClick={() => setRole('INSTRUCTOR')}
-              className="group w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-between"
+              className="group w-full py-5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-between"
             >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl group-hover:scale-110 transition-transform">📝</span>
-                <span className="text-lg">강사 모드</span>
+              <div className="flex items-center gap-4">
+                <span className="text-3xl group-hover:scale-110 transition-transform">📝</span>
+                <span className="text-xl">강사 모드</span>
               </div>
-              <svg className="w-5 h-5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+              <svg className="w-6 h-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>
         </div>
