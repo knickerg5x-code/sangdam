@@ -14,17 +14,18 @@ export interface ConsultationRequest {
   subject: string;
   assignedInstructorName: string;
   requesterName: string;
-  reason: string; // UI에서는 '상담 내용'으로 표시
+  reason: string;
   status: ConsultationStatus;
   createdAt: number;
   completedAt?: number;
   instructorNotes?: string;
-  availableTimeSlots: string[]; // ['월-1', '화-3'...]
-  proposedDay?: string;        // 강사가 제안한 요일
-  proposedTime?: string;       // 강사가 제안한 시간
-  isDeliveryConfirmed?: boolean; // 담임의 전달 완료 여부
+  availableTimeSlots: string[];
+  proposedDay?: string;
+  proposedTime?: string;
+  isDeliveryConfirmed?: boolean;
 }
 
 export const SUBJECTS = ['국어', '수학', '영어'];
+export const CLASSES = ['M1', 'M2', 'S1', 'S2', 'A1', 'A2', 'A3', 'A4'];
 export const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 export const PERIODS = [1, 2, 3, 4, 5, 6];
