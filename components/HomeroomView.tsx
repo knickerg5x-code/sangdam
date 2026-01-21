@@ -40,7 +40,7 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
       return;
     }
     onAddRequest({ ...formData, requesterName: teacherName.trim() });
-    alert('신청되었습니다.');
+    alert('상담이 신청되었습니다.');
     setFormData({ ...formData, studentName: '', reason: '', availableTimeSlots: [] });
     setIsFormOpen(false);
   };
@@ -49,10 +49,10 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <div className="bg-white p-8 rounded-3xl border shadow-xl max-w-sm w-full text-center">
-          <h3 className="text-xl font-black text-slate-800 mb-6">담임 모드 로그인</h3>
+          <h3 className="text-xl font-black text-slate-800 mb-6 tracking-tighter">담임 모드 접속</h3>
           <input
             type="text"
-            placeholder="선생님 성함"
+            placeholder="성함을 입력하세요"
             className="w-full p-4 rounded-2xl bg-slate-50 border-0 focus:ring-2 focus:ring-blue-500 text-center font-bold text-lg mb-4"
             value={teacherName}
             onChange={(e) => setTeacherName(e.target.value)}
@@ -65,29 +65,27 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
 
   return (
     <div className="space-y-6">
-      {/* 8. 상단 미완료 현황 요약 */}
       <div className="bg-white p-5 rounded-[2rem] border flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <div className="bg-orange-100 text-orange-600 p-3 rounded-2xl">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">우리반 미완료 상담 현황</p>
-            <p className="text-sm font-black text-slate-700">{pendingCount}건의 상담이 진행 중입니다</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">실시간 현황</p>
+            <p className="text-sm font-black text-slate-700">{pendingCount}건의 상담이 답변 대기 중</p>
           </div>
         </div>
         <button 
           onClick={() => setIsFormOpen(!isFormOpen)} 
           className={`px-5 py-2.5 rounded-2xl font-black text-xs shadow-md transition-all active:scale-95 ${isFormOpen ? 'bg-slate-100 text-slate-600' : 'bg-blue-600 text-white'}`}
         >
-          {isFormOpen ? '닫기' : '상담 신청'}
+          {isFormOpen ? '닫기' : '신청하기'}
         </button>
       </div>
 
       {isFormOpen && (
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-[2.5rem] border-2 border-blue-50 shadow-xl space-y-4 animate-in slide-in-from-top-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* 9. 반 선택 드롭다운 */}
             <select className="p-3 bg-slate-50 rounded-xl border-0 font-bold text-sm" value={formData.studentClass} onChange={e => setFormData({ ...formData, studentClass: e.target.value })}>
               {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -117,7 +115,7 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
             </table>
           </div>
           <textarea placeholder="상담 요청 사유를 입력하세요" className="w-full p-4 bg-slate-50 rounded-2xl border-0 text-sm h-20" value={formData.reason} onChange={e => setFormData({ ...formData, reason: e.target.value })} />
-          <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-[1.5rem] font-black text-lg shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all">상담 신청 완료</button>
+          <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-[1.5rem] font-black text-lg shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all">신청 완료</button>
         </form>
       )}
 
@@ -127,7 +125,6 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2 flex-wrap">
-                  {/* 7. 상담 완료 시 이름 클릭 가능 */}
                   <h4 
                     onClick={() => req.status === ConsultationStatus.COMPLETED && setSelectedNoteRequest(req)}
                     className={`font-black text-xl tracking-tight transition-colors ${req.status === ConsultationStatus.COMPLETED ? 'cursor-pointer text-blue-600 hover:text-blue-800 hover:underline' : 'text-slate-800'}`}
@@ -136,40 +133,38 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
                   </h4>
                   <span className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-black uppercase tracking-wider">{req.subject}</span>
                   
-                  {/* 3, 7. 상태 문구 표시 */}
                   {req.status === ConsultationStatus.COMPLETED ? (
                     <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black border border-emerald-200">상담 완료</span>
                   ) : req.proposedDay ? (
                     <div className="flex items-center gap-2">
                       <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-black animate-pulse shadow-sm">
-                        강사제안 상담시간 - {req.proposedDay}요일 {req.proposedTime}
+                        강사제안: {req.proposedDay}요일 {req.proposedTime || '시간미정'}
                       </span>
                     </div>
                   ) : (
-                    <span className="text-[10px] font-black text-slate-300">강사 확인 중...</span>
+                    <span className="text-[10px] font-black text-slate-300">강사 확인 대기 중</span>
                   )}
                 </div>
-                <p className="text-xs text-slate-400 font-bold italic">담당: {req.assignedInstructorName}T</p>
+                <p className="text-xs text-slate-400 font-bold italic">담당: {req.assignedInstructorName} 선생님</p>
               </div>
 
               <div className="flex items-center gap-3 w-full md:w-auto">
-                {/* 4. 학생 전달 확인 버튼 및 비활성화 로직 */}
                 {req.status !== ConsultationStatus.COMPLETED && req.proposedDay && (
                   req.isDeliveryConfirmed ? (
-                    <div className="flex-1 md:flex-none px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black flex items-center justify-center gap-2 border border-emerald-100 animate-in fade-in duration-300">
+                    <div className="flex-1 md:flex-none px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black flex items-center justify-center gap-2 border border-emerald-100 shadow-sm transition-all">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" /></svg>
-                      학생에게 전달하였음
+                      학생에게 전달됨
                     </div>
                   ) : (
                     <button 
                       onClick={() => {
-                        if(confirm('학생에게 상담 시간을 안내하셨습니까?')) {
+                        if(confirm('학생에게 상담 일정을 안내하셨습니까?')) {
                           onUpdateStatus(req.id, { isDeliveryConfirmed: true });
                         }
                       }}
                       className="flex-1 md:flex-none px-6 py-3 bg-slate-900 text-white rounded-2xl text-xs font-black shadow-xl hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
-                      전달 확인 버튼
+                      학생에게 전달하였음
                     </button>
                   )
                 )}
@@ -179,27 +174,26 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
         ))}
       </div>
 
-      {/* 7. 상담 결과 확인 모달 */}
       {selectedNoteRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-md" onClick={() => setSelectedNoteRequest(null)}>
           <div className="bg-white w-full max-w-sm rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <div className="bg-blue-600 p-8 text-white">
               <div className="flex items-center justify-between mb-2">
-                 <h3 className="font-black text-2xl tracking-tighter">{selectedNoteRequest.studentName} 상담 결과</h3>
+                 <h3 className="font-black text-2xl tracking-tighter">{selectedNoteRequest.studentName} 상담 기록</h3>
                  <button onClick={() => setSelectedNoteRequest(null)} className="p-1 hover:bg-white/20 rounded-full transition-colors">
                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l18 18" /></svg>
                  </button>
               </div>
-              <p className="text-xs font-bold opacity-70">{selectedNoteRequest.subject} • {selectedNoteRequest.assignedInstructorName} 선생님</p>
+              <p className="text-xs font-bold opacity-70">{selectedNoteRequest.subject} • {selectedNoteRequest.assignedInstructorName} 강사</p>
             </div>
             <div className="p-8 space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">강사 조치 사항</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">강사 조치 및 상담 내용</label>
                 <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 min-h-[120px]">
                   <p className="text-sm text-slate-700 font-bold leading-relaxed">{selectedNoteRequest.instructorNotes || "기록된 상담 결과가 없습니다."}</p>
                 </div>
               </div>
-              <button onClick={() => setSelectedNoteRequest(null)} className="w-full py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-sm active:scale-95 transition-all shadow-lg">확인 완료</button>
+              <button onClick={() => setSelectedNoteRequest(null)} className="w-full py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-sm active:scale-95 transition-all shadow-lg">창 닫기</button>
             </div>
           </div>
         </div>

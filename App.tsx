@@ -23,9 +23,11 @@ const App: React.FC = () => {
       setRequests(data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
       setLastSyncTime(new Date());
       setSyncError(null);
+      // 로컬 스토리지에 백업
+      localStorage.setItem('last_success_sync_data', JSON.stringify(data));
     } catch (e: any) {
       console.error("Sync Error:", e);
-      setSyncError("데이터를 불러오지 못했습니다. 스프레드시트 배포 상태를 확인하세요.");
+      setSyncError("연결 상태를 확인하세요.");
     } finally {
       if (showLoading) setIsSyncing(false);
       setIsInitialLoading(false);
@@ -34,7 +36,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     syncFromServer(true);
-    const interval = setInterval(() => syncFromServer(false), 15000);
+    const interval = setInterval(() => syncFromServer(false), 10000); // 10초마다 자동 갱신
     return () => clearInterval(interval);
   }, [syncFromServer]);
 
@@ -52,11 +54,7 @@ const App: React.FC = () => {
     
     const success = await GoogleSheetService.syncAdd(newRequest);
     if (success) {
-      setLastSyncTime(new Date());
-      addNotification(`상담 신청 완료 (동기화 중...)`, 'system');
-      setTimeout(() => syncFromServer(false), 3000);
-    } else {
-      setSyncError("서버 저장 실패");
+      setTimeout(() => syncFromServer(false), 1500); // 전송 후 즉시 갱신 시도
     }
     setIsSyncing(false);
   };
@@ -64,7 +62,6 @@ const App: React.FC = () => {
   const updateRequest = async (id: string, updates: Partial<ConsultationRequest>) => {
     let targetReq: ConsultationRequest | null = null;
     
-    // UI 업데이트 (Optimistic Update)
     setRequests(prev => prev.map(req => {
       if (req.id === id) {
         const updated = { ...req, ...updates };
@@ -81,14 +78,8 @@ const App: React.FC = () => {
       setIsSyncing(true);
       const success = await GoogleSheetService.syncUpdate(targetReq);
       if (success) {
-        setLastSyncTime(new Date());
-        // 데이터 전송 후 시트 동기화를 위해 짧은 지연 후 재로드
-        setTimeout(() => syncFromServer(false), 2000);
-        if (updates.isDeliveryConfirmed) {
-          addNotification("학생에게 전달된 상태가 서버에 저장되었습니다.", "system");
-        }
-      } else {
-        setSyncError("상태 업데이트 실패");
+        // 즉시 동기화하여 상대방 화면에 반영되도록 함
+        setTimeout(() => syncFromServer(false), 1000);
       }
       setIsSyncing(false);
     }
@@ -100,37 +91,11 @@ const App: React.FC = () => {
     setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4000);
   };
 
-  const exportToExcelAndEmail = () => {
-    if (requests.length === 0) {
-      alert("데이터가 없습니다.");
-      return;
-    }
-    const headers = ["일시", "반", "학생명", "과목", "담당강사", "상담요일", "상담시간", "결과"];
-    const rows = requests.map(req => [
-      new Date(req.createdAt).toLocaleDateString(),
-      req.studentClass,
-      req.studentName,
-      req.subject,
-      req.assignedInstructorName,
-      req.proposedDay || "-",
-      req.proposedTime || "-",
-      `"${(req.instructorNotes || "").replace(/"/g, '""')}"`
-    ]);
-
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `청솔_상담내역_${new Date().toLocaleDateString()}.csv`;
-    link.click();
-  };
-
   if (isInitialLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white">
-        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h2 className="text-lg font-black text-slate-800">서버 데이터 동기화 중...</h2>
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="font-black text-slate-400 text-xs">데이터 연결 중...</p>
       </div>
     );
   }
@@ -138,15 +103,15 @@ const App: React.FC = () => {
   if (!role) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl max-w-md w-full text-center">
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl max-w-md w-full text-center border">
           <div className="inline-flex p-5 bg-blue-600 rounded-[1.5rem] mb-6 shadow-xl">
              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
           </div>
-          <h1 className="text-2xl font-black text-slate-800 mb-2">강북청솔 상담센터</h1>
-          <p className="text-slate-400 font-bold mb-8">역할을 선택해 주세요</p>
-          <div className="space-y-4">
-            <button onClick={() => setRole('HOMEROOM')} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg active:scale-95 transition-all">담임 선생님</button>
-            <button onClick={() => setRole('INSTRUCTOR')} className="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black text-lg active:scale-95 transition-all">교과 강사</button>
+          <h1 className="text-2xl font-black text-slate-800 mb-2">청솔 상담센터</h1>
+          <p className="text-slate-400 font-bold mb-8 italic text-sm">학생의 성장을 위한 소통의 공간</p>
+          <div className="space-y-3">
+            <button onClick={() => setRole('HOMEROOM')} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg active:scale-95 transition-all shadow-lg shadow-blue-100">담임 선생님</button>
+            <button onClick={() => setRole('INSTRUCTOR')} className="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black text-lg active:scale-95 transition-all shadow-lg shadow-emerald-100">교과 강사</button>
           </div>
         </div>
       </div>
@@ -157,8 +122,8 @@ const App: React.FC = () => {
     <Layout 
       role={role} 
       onResetRole={() => setRole(null)} 
-      onShare={() => { syncFromServer(true); }}
-      onExport={exportToExcelAndEmail}
+      onShare={() => syncFromServer(true)}
+      onExport={() => {}}
       isSyncing={isSyncing}
       syncError={syncError}
       lastSyncTime={lastSyncTime}

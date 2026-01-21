@@ -25,7 +25,7 @@ import { ConsultationRequest } from '../types';
  *       proposedDay: String(data[i][9]),
  *       proposedTime: String(data[i][10]),
  *       instructorNotes: String(data[i][11]),
- *       isDeliveryConfirmed: String(data[i][12]) === 'TRUE',
+ *       isDeliveryConfirmed: String(data[i][12]).toUpperCase() === 'TRUE',
  *       status: String(data[i][13])
  *     });
  *   }
@@ -46,12 +46,12 @@ import { ConsultationRequest } from '../types';
  *     for (var i = 1; i < rows.length; i++) {
  *       if (String(rows[i][0]) === String(payload.id)) {
  *         var row = i + 1;
- *         // 명시적으로 모든 필드를 업데이트하여 데이터 유실 방지
- *         if (payload.proposedDay !== undefined) sheet.getRange(row, 10).setValue(payload.proposedDay);
- *         if (payload.proposedTime !== undefined) sheet.getRange(row, 11).setValue(payload.proposedTime);
- *         if (payload.instructorNotes !== undefined) sheet.getRange(row, 12).setValue(payload.instructorNotes);
+ *         // 각 필드를 명시적으로 업데이트
+ *         if (payload.proposedDay !== undefined) sheet.getRange(row, 10).setValue(String(payload.proposedDay));
+ *         if (payload.proposedTime !== undefined) sheet.getRange(row, 11).setValue(String(payload.proposedTime));
+ *         if (payload.instructorNotes !== undefined) sheet.getRange(row, 12).setValue(String(payload.instructorNotes));
  *         if (payload.isDeliveryConfirmed !== undefined) sheet.getRange(row, 13).setValue(payload.isDeliveryConfirmed ? "TRUE" : "FALSE");
- *         if (payload.status !== undefined) sheet.getRange(row, 14).setValue(payload.status);
+ *         if (payload.status !== undefined) sheet.getRange(row, 14).setValue(String(payload.status));
  *         break;
  *       }
  *     }
@@ -60,7 +60,7 @@ import { ConsultationRequest } from '../types';
  * }
  */
 
-const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzl3g7rGy_1sqUWpUzqV0DCPMXXo4S8WJCPOCkq5zpmII78loLQTlOOK74ekdvpI0X3/exec"; 
+const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwiWzFlUIuaf4KQbadfgex8q1isJ0n2KaNEBEp4OeUqMGzBUSnAD3Z1F9L6G7vOFAXl/exec"; 
 
 export const GoogleSheetService = {
   async fetchAll(): Promise<ConsultationRequest[]> {
