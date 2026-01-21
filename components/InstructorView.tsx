@@ -65,16 +65,14 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
             key={req.id} 
             className={`transition-all duration-300 p-6 rounded-[2.5rem] border shadow-md flex flex-col md:flex-row gap-8 relative overflow-hidden ${
               req.isDeliveryConfirmed 
-              ? 'bg-emerald-50 border-emerald-200 shadow-emerald-100/50' 
+              ? 'bg-emerald-50 border-emerald-300 shadow-emerald-200/50' 
               : 'bg-white border-slate-200'
             }`}
           >
-            {/* 전달 완료 상태 표시 배지 - 크기 확대 */}
+            {/* 전달 완료 상태 표시 배지 */}
             {req.isDeliveryConfirmed && (
-              <div className="absolute top-0 right-0 px-8 py-4 bg-emerald-600 text-white text-sm font-black italic rounded-bl-[2rem] shadow-xl z-20 flex items-center gap-3 animate-in slide-in-from-top-4">
-                <div className="bg-white/20 p-1 rounded-full">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" /></svg>
-                </div>
+              <div className="absolute top-0 right-0 px-6 py-3 bg-emerald-600 text-white text-xs font-black italic rounded-bl-3xl shadow-lg z-20 flex items-center gap-2 animate-in slide-in-from-top-4">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" /></svg>
                 <span>학생에게 전달됨</span>
               </div>
             )}
@@ -104,7 +102,7 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
             </div>
 
             <div className="flex-1 space-y-5">
-              <div className="flex justify-between items-start pr-20 md:pr-0">
+              <div className="flex justify-between items-start pr-12 md:pr-0">
                 <div>
                   <h4 className="text-2xl font-black text-slate-800">{req.studentClass} {req.studentName}</h4>
                   <p className="text-base text-slate-500 font-medium mt-1">
@@ -113,7 +111,7 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
                 </div>
               </div>
               
-              <div className={`p-5 rounded-3xl text-sm leading-relaxed italic border transition-colors ${req.isDeliveryConfirmed ? 'bg-white/60 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
+              <div className={`p-5 rounded-3xl text-sm leading-relaxed italic border transition-colors ${req.isDeliveryConfirmed ? 'bg-white/80 border-emerald-200' : 'bg-slate-50 border-slate-100'}`}>
                 <span className="block text-[11px] font-black text-slate-400 mb-2 uppercase tracking-widest not-italic">담임 선생님의 요청 내용</span>
                 <p className="text-slate-700 font-medium">"{req.reason}"</p>
               </div>
@@ -144,9 +142,9 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
                   </div>
 
                   {req.isDeliveryConfirmed ? (
-                    <div className="w-full py-4 bg-emerald-100 text-emerald-800 rounded-2xl text-sm font-black border-2 border-emerald-200 flex items-center justify-center gap-2 animate-in fade-in duration-300">
+                    <div className="w-full py-4 bg-emerald-500 text-white rounded-2xl text-sm font-black shadow-lg flex items-center justify-center gap-2 animate-in fade-in duration-300 border-0">
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                      <span>학생에게 시간 전달 되었음</span>
+                      <span>학생에게 시간이 전달되었습니다</span>
                     </div>
                   ) : (
                     <button 
@@ -201,12 +199,6 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
             </div>
           </div>
         ))}
-        {filteredRequests.length === 0 && (
-          <div className="text-center py-24 bg-white rounded-[3rem] border-4 border-dashed border-slate-50 flex flex-col items-center">
-            <span className="text-5xl mb-4 opacity-20">📂</span>
-            <p className="text-slate-300 font-black text-lg italic">상담 내역이 없습니다.</p>
-          </div>
-        )}
       </div>
     </div>
   );

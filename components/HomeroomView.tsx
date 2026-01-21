@@ -12,6 +12,7 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
   const [teacherName, setTeacherName] = useState<string>(() => localStorage.getItem('last_homeroom_name') || '');
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(!!localStorage.getItem('last_homeroom_name'));
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [showStatusPopup, setShowStatusPopup] = useState(false);
   const [formData, setFormData] = useState({
     studentClass: '',
     studentName: '',
@@ -55,6 +56,9 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
     setIsFormOpen(false);
   };
 
+  // 내 담당 학생들만 필터링
+  const myRequests = requests.filter(r => r.requesterName === teacherName.trim());
+
   if (!isLoggedIn) {
     return (
       <div className="flex flex-col items-center justify-center py-20 animate-in fade-in">
@@ -82,19 +86,65 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
+      {/* 상단 액션 바 */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-slate-500">담당교사:</span>
           <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg font-black text-sm">{teacherName}</span>
           <button onClick={() => { setIsLoggedIn(false); localStorage.removeItem('last_homeroom_name'); }} className="text-[10px] text-slate-400 hover:text-slate-600 font-bold underline ml-1">변경</button>
         </div>
-        <button
-          onClick={() => setIsFormOpen(!isFormOpen)}
-          className={`px-5 py-2.5 rounded-2xl font-bold transition-all shadow-lg active:scale-95 duration-75 ${isFormOpen ? 'bg-slate-200 text-slate-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-        >
-          {isFormOpen ? '취소' : '신규 상담 신청'}
-        </button>
+        
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setShowStatusPopup(true)}
+            className="flex-1 sm:flex-none px-5 py-2.5 bg-slate-800 text-white rounded-2xl font-bold text-sm shadow-md hover:bg-slate-700 active:scale-95 transition-all"
+          >
+            📊 상담현황
+          </button>
+          <button
+            onClick={() => setIsFormOpen(!isFormOpen)}
+            className={`flex-1 sm:flex-none px-5 py-2.5 rounded-2xl font-bold text-sm transition-all shadow-md active:scale-95 duration-75 ${isFormOpen ? 'bg-slate-200 text-slate-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+          >
+            {isFormOpen ? '취소' : '➕ 신규 신청'}
+          </button>
+        </div>
       </div>
+
+      {/* 상담현황 팝업 플래시 */}
+      {showStatusPopup && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowStatusPopup(false)}>
+          <div className="bg-white w-full max-w-xs rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+              <h4 className="font-black text-lg">실시간 상담현황</h4>
+              <button onClick={() => setShowStatusPopup(false)} className="text-slate-400 hover:text-white transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l18 18" /></svg>
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto p-4 space-y-2">
+              {myRequests.length === 0 ? (
+                <p className="text-center py-10 text-slate-400 font-bold text-sm">신청 데이터가 없습니다.</p>
+              ) : (
+                myRequests.map(req => (
+                  <div key={req.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-slate-800">{req.studentName}</span>
+                      <span className="text-[10px] font-bold text-slate-400">{req.subject}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-3 py-1 rounded-full text-[11px] font-black shadow-sm ${req.status === ConsultationStatus.COMPLETED ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                        {req.status === ConsultationStatus.COMPLETED ? '상담 O' : '상담 X'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-100">
+              <button onClick={() => setShowStatusPopup(false)} className="w-full py-3 bg-slate-200 text-slate-700 rounded-xl font-black text-xs">닫기</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isFormOpen && (
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-3xl border-2 border-blue-50 shadow-xl space-y-6 animate-in slide-in-from-top-4 duration-300">
@@ -129,7 +179,6 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
                             onClick={() => toggleTimeSlot(d, p)}
                             className={`border p-3 cursor-pointer transition-all active:opacity-70 h-10 md:h-12 ${isSelected ? 'bg-blue-600' : 'bg-white'}`}
                           >
-                            {/* 체크 표시 제거됨 */}
                           </td>
                         );
                       })}
@@ -150,10 +199,10 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
       )}
 
       <div className="grid gap-4">
-        {requests.filter(r => r.requesterName === teacherName.trim()).length === 0 ? (
+        {myRequests.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 font-bold italic">신청 내역이 없습니다.</div>
         ) : (
-          requests.filter(r => r.requesterName === teacherName.trim()).map(req => (
+          myRequests.map(req => (
             <div key={req.id} className={`bg-white p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md ${req.status === ConsultationStatus.COMPLETED ? 'opacity-60 grayscale-[0.5]' : ''}`}>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex-1">
@@ -184,7 +233,6 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
                             onClick={() => {
                               if(confirm('학생에게 상담 시간을 안내하셨습니까?')) {
                                 onUpdateStatus(req.id, { isDeliveryConfirmed: true });
-                                alert('전달되었습니다.');
                               }
                             }}
                             className="w-full md:w-auto px-6 py-3 bg-slate-800 text-white rounded-2xl text-xs font-black hover:bg-slate-700 transition-all active:scale-95 active:shadow-inner duration-75 shadow-md flex items-center justify-center gap-2"

@@ -64,6 +64,7 @@ const App: React.FC = () => {
   const updateRequest = async (id: string, updates: Partial<ConsultationRequest>) => {
     let targetReq: ConsultationRequest | null = null;
     
+    // UI 업데이트 (Optimistic Update)
     setRequests(prev => prev.map(req => {
       if (req.id === id) {
         const updated = { ...req, ...updates };
@@ -81,7 +82,11 @@ const App: React.FC = () => {
       const success = await GoogleSheetService.syncUpdate(targetReq);
       if (success) {
         setLastSyncTime(new Date());
-        setTimeout(() => syncFromServer(false), 3000);
+        // 데이터 전송 후 시트 동기화를 위해 짧은 지연 후 재로드
+        setTimeout(() => syncFromServer(false), 2000);
+        if (updates.isDeliveryConfirmed) {
+          addNotification("학생에게 전달된 상태가 서버에 저장되었습니다.", "system");
+        }
       } else {
         setSyncError("상태 업데이트 실패");
       }
