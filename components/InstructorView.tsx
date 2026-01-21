@@ -65,15 +65,15 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
             key={req.id} 
             className={`transition-all duration-300 p-6 rounded-[2.5rem] border shadow-md flex flex-col md:flex-row gap-8 relative overflow-hidden ${
               req.isDeliveryConfirmed 
-              ? 'bg-emerald-50 border-emerald-300 shadow-emerald-200/50' 
+              ? 'bg-blue-50 border-blue-200 shadow-blue-100' 
               : 'bg-white border-slate-200'
             }`}
           >
-            {/* 전달 완료 상태 표시 배지 */}
+            {/* 상담 약속 체결 배지 */}
             {req.isDeliveryConfirmed && (
-              <div className="absolute top-0 right-0 px-6 py-3 bg-emerald-600 text-white text-xs font-black italic rounded-bl-3xl shadow-lg z-20 flex items-center gap-2 animate-in slide-in-from-top-4">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" /></svg>
-                <span>학생에게 전달됨</span>
+              <div className="absolute top-0 right-0 px-6 py-3 bg-blue-600 text-white text-[11px] font-black rounded-bl-3xl shadow-lg z-20 flex items-center gap-2 animate-in slide-in-from-top-4">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                <span>상담 약속 체결됨</span>
               </div>
             )}
 
@@ -104,14 +104,19 @@ export const InstructorView: React.FC<InstructorViewProps> = ({ requests, onUpda
             <div className="flex-1 space-y-5">
               <div className="flex justify-between items-start pr-12 md:pr-0">
                 <div>
-                  <h4 className="text-2xl font-black text-slate-800">{req.studentClass} {req.studentName}</h4>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-2xl font-black text-slate-800">{req.studentClass} {req.studentName}</h4>
+                    {req.isDeliveryConfirmed && (
+                      <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-black shadow-sm animate-pulse">상담 약속 체결</span>
+                    )}
+                  </div>
                   <p className="text-base text-slate-500 font-medium mt-1">
                     과목: <span className="text-emerald-700 font-black">{req.subject}</span> • 신청: {req.requesterName} 선생님
                   </p>
                 </div>
               </div>
               
-              <div className={`p-5 rounded-3xl text-sm leading-relaxed italic border transition-colors ${req.isDeliveryConfirmed ? 'bg-white/80 border-emerald-200' : 'bg-slate-50 border-slate-100'}`}>
+              <div className={`p-5 rounded-3xl text-sm leading-relaxed italic border transition-colors ${req.isDeliveryConfirmed ? 'bg-white/80 border-blue-100' : 'bg-slate-50 border-slate-100'}`}>
                 <span className="block text-[11px] font-black text-slate-400 mb-2 uppercase tracking-widest not-italic">담임 선생님의 요청 내용</span>
                 <p className="text-slate-700 font-medium">"{req.reason}"</p>
               </div>

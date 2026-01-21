@@ -224,7 +224,7 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
                       
                       {req.status !== ConsultationStatus.COMPLETED && (
                         req.isDeliveryConfirmed ? (
-                          <div className="flex items-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-2xl text-xs font-black border-2 border-emerald-100 animate-in fade-in zoom-in-95">
+                          <div className="flex items-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-2xl text-xs font-black border-2 border-emerald-100 animate-in fade-in zoom-in-95 w-full md:w-auto justify-center">
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                             학생에게 전달됨
                           </div>
@@ -235,7 +235,7 @@ export const HomeroomView: React.FC<HomeroomViewProps> = ({ requests, onAddReque
                                 onUpdateStatus(req.id, { isDeliveryConfirmed: true });
                               }
                             }}
-                            className="w-full md:w-auto px-6 py-3 bg-slate-800 text-white rounded-2xl text-xs font-black hover:bg-slate-700 transition-all active:scale-95 active:shadow-inner duration-75 shadow-md flex items-center justify-center gap-2"
+                            className="w-full md:w-auto px-6 py-3 bg-slate-800 text-white rounded-2xl text-xs font-black hover:bg-slate-700 transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
                           >
                             <span>학생에게 전달 완료</span>
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7-7 7" /></svg>
